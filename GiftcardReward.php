@@ -7,6 +7,7 @@ use \REDCap;
 
 require_once "emLoggerTrait.php";
 require_once "src/InsertInstrumentHelper.php";
+require_once "src/RewardInstance.php";
 
 /**
  * Class GiftcardReward
@@ -18,10 +19,11 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
     use emLoggerTrait;
 
 
-    /*******************************************************************************************************************/
-    /* HOOK METHODS                                                                                                    */
-    /***************************************************************************************************************** */
+    // public $
 
+    /******************************************************************************************************************/
+    /* HOOK METHODS                                                                                                   */
+    /******************************************************************************************************************/
 
     public function redcap_module_system_enable() {
         $this->emDebug(__METHOD__);
@@ -37,15 +39,15 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
     public function redcap_module_link_check_display($project_id, $link) {
         // TODO: Loop through each portal config that is enabled and see if they are all valid.
-        //TODO: ask andy123; i'm not sure what KEY_VALID_CONFIGURATION is for...
-        //if ($this->getSystemSetting(self::KEY_VALID_CONFIGURATION) == 1) {
-        list($result, $message)  = $this->getConfigStatus();
-        if ($result === true) {
-                    // Do nothing - no need to show the link
-        } else {
-            $link['icon'] = "exclamation";
-        }
-        return $link;
+        // TODO: ask andy123; i'm not sure what KEY_VALID_CONFIGURATION is for...
+        // //if ($this->getSystemSetting(self::KEY_VALID_CONFIGURATION) == 1) {
+        // list($result, $message)  = $this->getConfigStatus();
+        // if ($result === true) {
+        //             // Do nothing - no need to show the link
+        // } else {
+        //     $link['icon'] = "exclamation";
+        // }
+        // return $link;
     }
 
 
@@ -62,9 +64,46 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
 
     /******************************************************************************************************************/
-    /*  METHODS                                                                                                       */
+    /* METHODS                                                                                                       */
     /******************************************************************************************************************/
 
+    // Parse the configuration settings for this EM to ensure they meet business requirements
+    public function verifyConfig() {
+        $errors = array();
+
+        // Verify GiftCard Repo
+        $gcr_pid = $this->getProjectSetting('gcr-pid');
+        $gcr_event_id = $this->getProjectSetting('gcr-event-id');
+        list($result, $data) = $this->verifyGiftCardRepo($gcr_pid, $gcr_event_id);
+        if ($result === false) $errors =+ $data;
+
+        // Verify Reward Instance Configurations
+        $instances = $this->getSubSettings('rewards');
+        foreach ($instances as $i => $instance) {
+
+            // Create a new reward
+            $ri = new RewardInstance($this, $instance);
+
+            list($result,$data) = $ri->verifyConfig();
+
+            if ($result === false) {
+                $this->emDebug("Errors with instance " . ($i+1), $data);
+                // $errors =+ $data;
+            }
+
+        }
+
+        return array(true, $errors);
+    }
+
+    public function verifyGiftCardRepo($pid, $event_id) {
+        // Make sure the giftcard repository has the correct fields and is properly configured!
+        //TODO: IMPLEMENT
+    }
+
+
+
+/*
     public function getConfigStatus() {
 
         $iih = new InsertInstrumentHelper($this);
@@ -136,7 +175,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
     }
 
-
     public function designateEvent($form, $event) {
         $iih = new InsertInstrumentHelper($this);
 
@@ -149,6 +187,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         return array($result, $message);
 
     }
+*/
 
     /******************************************************************************************************************/
     /* HELPER METHODS                                                                                                 */

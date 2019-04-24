@@ -59,26 +59,111 @@
       "required": false,
       "type": "checkbox"
     },
-
     {
-      "key": "giftcard-pid",
-      "name": "<b>Giftcard Project</b><br>This is the project containing the giftcards",
+      "key": "gcr-info",
+      "name": "<h3>Gift Card Repository (GCR) Information</h3>",
       "required": false,
-      "type": "project-list",
+      "type": "descriptive"
+    },
+    {
+      "key": "gcr-pid",
+      "name": "<span class='text-lg badge badge-lg badge-secondary'>GCR Project ID</span><br>This is the project containing all of the gift cards",
+      "required": false,
+      "type": "project-id",
       "source": "js/config.js",
       "functionName": "gc.config"
     },
     {
-      "key": "reward-logic",
-      "name": "<b>Reward Logic</b><br>A gift card will be automatically awarded when this logic is true",
+      "key": "gcr-event-id",
+      "name": "<span class='text-lg badge badge-lg badge-secondary'>GCR Event ID</span><br>If the Gift Card Repository is longitudinal, specify the numerical <u>Event ID</u> where the form resides<br>Leave blank for classical.  Must be a number.",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "key": "rewards",
+      "name": "<h6><span class='text-lg badge badge-lg badge-success'>Gift Card Instance</span></h6>Each of the fields below configure a single gift card event from this project.",
+      "type": "sub_settings",
+      "repeatable": true,
+      "sub_settings": [
+        {
+          "key": "reward-title",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Title</span></h6>A descriptive name for this reward<br><i>(e.g. Baseline Complete)",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "key": "reward-logic",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Logic</span></h6>A gift card will be automatically awarded when this logic is true AND the ID field below is empty",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "key": "reward-fk-field",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Field</span></h6>Specify a field in this project where the ID of the Gift Card assigned to this reward will be stored",
+          "required": true,
+          "type": "field-list"
+        },
+        {
+          "key": "reward-fk-event-id",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Field Event</span></h6>Specify the event where the id field above resides",
+          "required": true,
+          "type": "event-list"
+        },
+        {
+          "key": "reward-amount",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Amount</span></h6>Specify the dollar amount for this gift card.<br>Only cards with a matching dollar amount from the GCR will be used.<br>If left blank, the next card from the GCR will be taken regardless of dollar value.",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "key": "reward-email",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Address</span></h6>Enter the email address field from this project where the reward will be sent",
+          "required": true,
+          "type": "field-list"
+        },
+        {
+          "key": "reward-email-subject",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Subject</span></h6>Enter the subject for the reward email.<br>Piping is allowed",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "key": "reward-email-header",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Header</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
+          "required": false,
+          "type": "rich-text"
+        },
+        {
+          "key": "reward-email-verification",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Forward Email Verification</span></h6>(optional) If checked, prior to receiving the actual gift card details, the user will have to verify their email address.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "reward-email-verify-subject",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Subject</span></h6>If <b>Force Email Verification</b> is checked, an email with this subject will be sent first.",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "key": "reward-email-verify-header",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Header</span></h6>If <b>Force Email Verification</b> is checked, this header will be prepended to the directions to access the gift card.",
+          "required": false,
+          "type": "rich-text"
+        }
+      ]
+    },
+    {
+      "key": "alert-email",
+      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>Alert Email</h6></span>(optional) In the event gift cards are exhausted or any other error occurs, an email will be sent to this email address",
       "required": false,
       "type": "text"
     },
     {
-      "key": "alert-email",
-      "name": "<b>Alert Email</b><br>In the event gift cards are exhausted an email will be sent to this email address",
+      "key": "maximum-frequency",
+      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>Maximum Frequency</h6></span>(optional) Enter a maximum number of gift cards to issue from this project in a 24 hour period.  If the actual number exceeds this number, no more gift cards will be allowed and the alert-email above will be notified.",
       "required": false,
-      "type": "text"
+      "type": "number"
     }
   ]
 

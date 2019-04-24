@@ -140,13 +140,13 @@
           "type": "checkbox"
         },
         {
-          "key": "reward-email-verify-subject",
+          "key": "reward-email-verification-subject",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Subject</span></h6>If <b>Force Email Verification</b> is checked, an email with this subject will be sent first.",
           "required": false,
           "type": "text"
         },
         {
-          "key": "reward-email-verify-header",
+          "key": "reward-email-verification-header",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Header</span></h6>If <b>Force Email Verification</b> is checked, this header will be prepended to the directions to access the gift card.",
           "required": false,
           "type": "rich-text"

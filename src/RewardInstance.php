@@ -6,8 +6,13 @@ namespace Stanford\GiftcardReward;;
 
 class RewardInstance
 {
-    /** @var \Stanford\Summarize\Summarize $module */
+    /** @var \Stanford\GiftcardReward\GiftcardReward $module */
     private $module;
+
+    public $title, $logic, $fk_field, $fk_event_id, $amount,
+        $email, $email_subject, $email_header, $email_verification,
+        $email_verification_subject, $email_verification_header;
+
 
 
 
@@ -15,19 +20,17 @@ class RewardInstance
     {
         $this->module = $module;
 
-        // $this->include_forms     = $this->parseConfigList( $instance['include_forms']  );
-        // $this->include_fields    = $this->parseConfigList( $instance['include_fields'] );
-        // $this->exclude_fields    = $this->parseConfigList( $instance['exclude_fields'] );
-        // $this->event_id          = $instance['event_id'];
-        // $this->destination_field = $instance['destination_field'];
-        // $this->title             = $instance['title'];
-        //
-        // global $Proj;
-        // $this->Proj = $Proj;
-        // $this->Proj->setRepeatingFormsEvents();
-        //
-        // $this->getAllFields();
-        // $module->emDebug("Forms", $this->include_forms);
+        $this->title                        = $instance['reward-title'];
+        $this->logic                        = $instance['reward-logic'];
+        $this->fk_field                     = $instance['reward-fk-field'];
+        $this->fk_event_id                  = $instance['reward-fk-event-id'];
+        $this->amount                       = $instance['reward-amount'];
+        $this->email                        = $instance['reward-email'];
+        $this->email_subject                = $instance['reward-email-subject'];
+        $this->email_header                 = $instance['reward-email-header'];
+        $this->email_verification           = $instance['reward-email-verification'];
+        $this->email_verification_subject   = $instance['reward-email-verification-subject'];
+        $this->email_verification_header    = $instance['reward-email-verification-header'];
 
     }
 
@@ -41,5 +44,10 @@ class RewardInstance
         //TODO:
         return array(true, null);
     }
+
+
+
+
+
 
 }

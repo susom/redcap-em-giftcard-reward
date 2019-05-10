@@ -24,9 +24,6 @@
 
   "permissions": [
     "redcap_save_record",
-    "redcap_survey_complete",
-    "redcap_module_system_enable",
-    "redcap_module_link_check_display",
     "redcap_module_save_configuration"
   ],
 
@@ -35,11 +32,6 @@
 
     ],
     "project": [
-      {
-        "name": "Giftcard Rewards",
-        "icon": "gear",
-        "url": "src/test.php"
-      }
     ]
   },
 
@@ -68,10 +60,10 @@
     {
       "key": "gcr-pid",
       "name": "<span class='text-lg badge badge-lg badge-secondary'>GCR Project ID</span><br>This is the project containing all of the gift cards",
-      "required": false,
+      "required": true,
       "type": "project-id",
-      "source": "js/config.js",
-      "functionName": "gc.config"
+      "source": "config/config.js",
+      "functionName": "GiftCardRewardConfig.init"
     },
     {
       "key": "gcr-event-id",
@@ -92,6 +84,12 @@
           "type": "text"
         },
         {
+          "key": "reward-fk-event-id",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Field Event</span></h6>Specify the event where the the following fields resides",
+          "required": true,
+          "type": "event-list"
+        },
+        {
           "key": "reward-logic",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Logic</span></h6>A gift card will be automatically awarded when this logic is true AND the ID field below is empty",
           "required": true,
@@ -104,10 +102,10 @@
           "type": "field-list"
         },
         {
-          "key": "reward-fk-event-id",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Field Event</span></h6>Specify the event where the id field above resides",
+          "key": "reward-status",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Status Field</span></h6>Specify the field where the reward status should be put",
           "required": true,
-          "type": "event-list"
+          "type": "field-list"
         },
         {
           "key": "reward-amount",
@@ -131,7 +129,7 @@
           "key": "reward-email-header",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Header</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
           "required": false,
-          "type": "rich-text"
+          "type": "textarea"
         },
         {
           "key": "reward-email-verification",
@@ -149,7 +147,7 @@
           "key": "reward-email-verification-header",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Header</span></h6>If <b>Force Email Verification</b> is checked, this header will be prepended to the directions to access the gift card.",
           "required": false,
-          "type": "rich-text"
+          "type": "textarea"
         }
       ]
     },

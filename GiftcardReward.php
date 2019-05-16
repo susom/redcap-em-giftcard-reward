@@ -19,34 +19,15 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
     use emLoggerTrait;
 
+    // These are required fields for the gift card library.  If any of these fields are not
+    // present, we cannot continue.  We will give the option to update a form with these fields.
     protected $gcr_required_fields = array('reward_id', 'egift_number', 'url', 'amount', 'status',
-                                    'reward_name', 'reward_pid', 'reward_record',
+                                    'reward_hash', 'reward_name', 'reward_pid', 'reward_record',
                                     'reserved_ts', 'claimed_ts');
 
     /******************************************************************************************************************/
     /* HOOK METHODS                                                                                                   */
     /******************************************************************************************************************/
-    /*
-    public function redcap_module_system_enable() {
-        $this->emDebug(__METHOD__);
-    }
-    */
-    /*
-    public function redcap_module_link_check_display($project_id, $link) {
-        // TODO: Loop through each portal config that is enabled and see if they are all valid.
-        // TODO: ask andy123; i'm not sure what KEY_VALID_CONFIGURATION is for...
-        // //if ($this->getSystemSetting(self::KEY_VALID_CONFIGURATION) == 1) {
-        // list($result, $message)  = $this->getConfigStatus();
-        // if ($result === true) {
-        //             // Do nothing - no need to show the link
-        // } else {
-        //     $link['icon'] = "exclamation";
-        // }
-        // return $link;
-    }
-    */
-
-
     /**
      * When the External Module configuration is saved, check to make sure each configuration is valid
      *
@@ -111,21 +92,21 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
                 $eligible = $reward->checkRewardStatus($record);
 
                 if ($eligible) {
-                    $message = "[PID:". $project_id . "] - record $record is eligible for " . $config["reward-title"] . " reward.";
+                    $message = "[PID:". $project_id . "] - record $record is eligible for " . $config_info["reward-title"] . " reward.";
                     $this->emDebug($message);
                     list($rewardSent, $message) = $reward->processReward($record, $this->gcr_required_fields);
 
                     if ($rewardSent) {
-                        $message = "Reward for [$project_id] record $record was sent for " . $config["reward-title"] . " reward.";
+                        $message = "Reward for [$project_id] record $record was sent for " . $config_info["reward-title"] . " reward.";
                         $this->emLog($message);
                     } else {
-                        $message .= "<br>ERROR: Reward for [PID:$project_id] record $record was NOT sent for " . $config["reward-title"] . " reward.";
+                        $message .= "<br>ERROR: Reward for [PID:$project_id] record $record was NOT sent for " . $config_info["reward-title"] . " reward.";
                         $this->emError($message);
                     }
                 }
 
             } else {
-                $message = "[PID:" . $project_id . "] Reward configuration " . $config["reward-title"] . " is invalid so cannot evaluate for records!";
+                $message = "[PID:" . $project_id . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate for records!";
                 $this->emError($message);
             }
         }
@@ -193,7 +174,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             }
         }
 
-        $this->emLog("Leaving verifyConfigs: status: $overallStatus, messages: " . json_encode($errors));
         return array($overallStatus, $errors);
     }
 
@@ -317,111 +297,5 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             return null;
         }
     }
-
-
-/*
-    public function getConfigStatus() {
-
-        $iih = new InsertInstrumentHelper($this);
-
-        $alerts = array();
-        $result = false;
-
-        $main_events = $this->getProjectSetting('main-config-event-name');
-
-        $survey_events = $this->getProjectSetting('survey-event-name');
-        //$this->emDebug("SURVEY",$survey_events);
-
-        if (!$iih->formExists(self::PARTICIPANT_INFO_FORM)) {
-            $p = "<b>Participant Info form has not yet been created. </b> 
-              <div class='btn btn-xs btn-primary float-right' data-action='insert_form' data-form='" . self::PARTICIPANT_INFO_FORM ."'>Create Form</div>";
-            $alerts[] = $p;
-        } else {
-            // Form exists - check if enabled on event
-            foreach ($main_events as $sub => $event) {
-                if (isset($event)) {
-                    if (!$iih->formDesignatedInEvent(self::PARTICIPANT_INFO_FORM, $event)) {
-                        $event_name = REDCap::getEventNames(false, true, $event);
-                        $pe = "<b>Participant Info form has not been designated to the event selected for the main event: <br>".$event_name.
-                            " </b><div class='btn btn-xs btn-primary float-right' data-action='designate_event' data-event='".$event.
-                            "' data-form='".self::PARTICIPANT_INFO_FORM."'>Designate Form</div>";
-                        $alerts[] = $pe;
-                    }
-                }
-            }
-        }
-
-        if (!$iih->formExists(self::SURVEY_METADATA_FORM)) {
-            $s=  "<b>Survey Info form has not yet been created. </b> 
-              <div class='btn btn-xs btn-primary float-right' data-action='insert_form' data-form='" . self::SURVEY_METADATA_FORM . "'>Create Form</div>";
-            $alerts[] = $s;
-        } else {
-            foreach ($survey_events as $sub => $event) {
-                if (isset($event)) {
-                    if (!$iih->formDesignatedInEvent(self::SURVEY_METADATA_FORM, $event)) {
-                        $event_name = REDCap::getEventNames(false, true, $event);
-                        $se = "<b>Survey Metadata form has not been designated to the event selected for the survey event: <br>".$event_name.
-                            " </b><div class='btn btn-xs btn-primary float-right' data-action='designate_event' data-event='".$event.
-                            "' data-form='".self::SURVEY_METADATA_FORM."'>Designate Form</div>";
-                        $alerts[] = $se;
-                    }
-                }
-            }
-        }
-
-        //$this->emDebug($alerts);
-
-        if (empty($alerts)) {
-            $result = true;
-            $alerts[] = "Your configuration appears valid!";
-        }
-
-        return array( $result, $alerts );
-    }
-
-    public function insertForm($form) {
-        $iih = new InsertInstrumentHelper($this);
-
-        $result = $iih->insertForm($form);
-        $message = $iih->getErrors();
-
-        $this->emDebug("RETURN STATUS", $result, $message);
-
-        return array($result, $message);
-
-    }
-
-    public function designateEvent($form, $event) {
-        $iih = new InsertInstrumentHelper($this);
-
-        $this->emDebug("DESIGNATING EVENT: ". $form . $event);
-        $result = $iih->designateFormInEvent($form, $event);
-        $message = $iih->getErrors();
-
-        $this->emDebug("RETURN STATUS", $result, $message);
-
-        return array($result, $message);
-
-    }
-*/
-
-    /******************************************************************************************************************/
-    /* HELPER METHODS                                                                                                 */
-    /******************************************************************************************************************/
-
-    /**
-     * @param $input    A string like 1,2,3-55,44,67
-     * @return mixed    An array with each number enumerated out [1,2,3,4,5,...]
-     */
-    /*
-    static function parseRangeString($input) {
-        $input = preg_replace('/\s+/', '', $input);
-        $string = preg_replace_callback('/(\d+)-(\d+)/', function ($m) {
-            return implode(',', range($m[1], $m[2]));
-        }, $input);
-        $array = explode(",",$string);
-        return empty($array) ? false : $array;
-    }
-    */
 
 }

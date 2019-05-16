@@ -29,11 +29,14 @@
 
   "links": {
     "control-center": [
-
     ],
     "project": [
     ]
   },
+
+  "no-auth-pages": [
+    "src/DisplayReward"
+  ],
 
   "system-settings": [
     {
@@ -120,6 +123,12 @@
           "type": "field-list"
         },
         {
+          "key": "reward-email-from",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email From</span></h6>Enter the email address to use in the From field.",
+          "required": true,
+          "type": "text"
+        },
+        {
           "key": "reward-email-subject",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Subject</span></h6>Enter the subject for the reward email.<br>Piping is allowed",
           "required": true,
@@ -129,7 +138,7 @@
           "key": "reward-email-header",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Header</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
           "required": false,
-          "type": "textarea"
+          "type": "rich-text"
         },
         {
           "key": "reward-email-verification",
@@ -147,7 +156,7 @@
           "key": "reward-email-verification-header",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Header</span></h6>If <b>Force Email Verification</b> is checked, this header will be prepended to the directions to access the gift card.",
           "required": false,
-          "type": "textarea"
+          "type": "rich-text"
         }
       ]
     },

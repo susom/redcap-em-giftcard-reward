@@ -1,7 +1,7 @@
 <?php
+namespace Stanford\GiftcardReward;
 
-namespace Stanford\GiftcardReward;;
-
+use Piping;
 use \Project;
 use \REDCap;
 use \Message;
@@ -15,10 +15,9 @@ class RewardInstance
     private $title, $logic, $fk_field, $fk_event_id, $gc_status, $amount,
         $email, $email_subject, $email_header, $email_verification,
         $email_verification_subject, $email_verification_header,
-        $from_email;
+        $email_from, $email_address;
 
     private $gcr_pid, $gcr_event_id, $gcr_pk;
-
 
     public function __construct($module, $gcr_pid, $gcr_event_id, $instance)
     {
@@ -39,12 +38,13 @@ class RewardInstance
 
         // These are reward email parameters
         $this->email                        = $instance['reward-email'];
+        $this->email_from                   = $instance['reward-email-from'];
         $this->email_subject                = $instance['reward-email-subject'];
         $this->email_header                 = $instance['reward-email-header'];
         $this->email_verification           = $instance['reward-email-verification'];
         $this->email_verification_subject   = $instance['reward-email-verification-subject'];
         $this->email_verification_header    = $instance['reward-email-verification-header'];
-        $this->from_email                   = 'yasukawa@stanford.edu';
+        $this->alert_email                  = $instance['alert-email'];
 
         // There are gift card library parameters
         $this->gcr_pid = $gcr_pid;
@@ -54,6 +54,29 @@ class RewardInstance
         } catch (Exception $ex) {
             $this->module->emError("Exception caught initializing RewardInstance for project $this->project_id");
         }
+    }
+
+
+    /**
+     * Retrieve any info we need about the Gift Card Library here.  Right now, if an event id is not
+     * specified in the config file, retrieve it.  Also, store the primary key for later use.
+     *
+     * @throws \Exception
+     */
+    private function getGiftCardLibraryParams() {
+
+        $gcr_proj = new Project($this->gcr_pid);
+        $gcr_proj->setRepeatingFormsEvents();
+
+        // Make sure we have an event_id in the gift card rewards project
+        if (!isset($this->gcr_event_id) && ($gcr_proj->numEvents === 1)) {
+            // If this project has only 1 event id and it wasn't specified, then set it.
+            $this->gcr_event_id = array_keys($gcr_proj->eventInfo)[0];
+        } else if (!isset($this->gcr_event_id)) {
+            $this->module->emError("Gift Card Libary has more than 1 event - select one through the External Module Configuration");
+        }
+
+        $this->gcr_pk = $gcr_proj->table_pk;
     }
 
     /**
@@ -80,10 +103,9 @@ class RewardInstance
 
         // Check that the forms that the required fields are on are in this event
         $all_forms = array();
-        //$all_forms[0] = $metaData[$this->logic]['form_name'];  // Since we are checking the logic, can we skip parsing this?
-        $all_forms[1] = $metaData[$this->fk_field]['form_name'];
-        $all_forms[2] = $metaData[$this->gc_status]['form_name'];
-        $all_forms[3] = $metaData[$this->email]['form_name'];
+        $all_forms[0] = $metaData[$this->fk_field]['form_name'];
+        $all_forms[1] = $metaData[$this->gc_status]['form_name'];
+        $all_forms[2] = $metaData[$this->email]['form_name'];
         $diff = array_diff($all_forms, $this->Proj->eventsForms[$this->fk_event_id]);
         if (!empty($diff)) {
             $message .= "<li>The project fields are not all in event " . $this->fk_event_id . "</li>";
@@ -149,36 +171,33 @@ class RewardInstance
     public function checkRewardStatus($record=null) {
 
         $status = null;
-        $test_record = null;
 
         // If a record was not given, find a record to test the logic on
         // This path is used to test out the logic to make sure it is configured correctly
         if (empty($record)) {
-            $data = REDCap::getData($this->project_id, 'array', null,
-                    array($this->Proj->table_pk), $this->fk_event_id);
-            $test_record = array_keys($data)[0];
-            if (empty($test_record)) {
+            $data = REDCap::getData($this->project_id, 'array', null, array($this->Proj->table_pk), $this->fk_event_id);
+            $record = array_keys($data)[0];
+            if (empty($record)) {
                 $this->module->emError("There are no records to test the gift card logic '" . $this->logic . "' for pid $this->project_id");
             } else {
-                $this->module->emDebug("Found record $test_record to test logic " . $this->logic);
+                $this->module->emDebug("Found record $record to test logic " . $this->logic);
             }
         } else {
 
             // If a record was given, make sure a reward was not already given
-            $test_record = $record;
-            $data = REDCap::getData($this->project_id, 'array', $test_record,
-                array($this->fk_field, $this->gc_status), $this->fk_event_id);
-            $thisRecord = $data[$test_record][$this->fk_event_id];
+            $data = REDCap::getData($this->project_id, 'array', $record, null, $this->fk_event_id);
+            $thisRecord = $data[$record][$this->fk_event_id];
+            $this->email_address = $thisRecord[$this->email];
 
-            // If either the fk_field and gc_status fields are not blank, a gc has already been issued
-            if (!empty($thisRecord[$this->fk_field]) || !empty($thisRecord[$this->gc_status])) {
+            // If the fk_field field is not blank, a gc has already been issued
+            if (!empty($thisRecord[$this->fk_field])) {
                 $status = false;
             }
         }
 
         // Test the logic for this record
-        if (($test_record !== null) && ($status !== false)) {
-            $status = REDCap::evaluateLogic($this->logic, $this->project_id, $test_record);
+        if (($record !== null) && ($status !== false)) {
+            $status = REDCap::evaluateLogic($this->logic, $this->project_id, $record);
         }
 
         return $status;
@@ -202,6 +221,10 @@ class RewardInstance
 
             // We were not able to find a reward that meets our criteria.
             $message = "No reward was found in project " . $this->gcr_pid . " which meets our criteria for $this->title reward";
+
+            // Send email to the alert email address to notify them there are no longer any gift cards and update record
+            $this->sendAlertEmailNoGiftCards($record_id);
+
         } else {
 
             // There is a valid reward available so reserve it
@@ -209,6 +232,35 @@ class RewardInstance
         }
 
         return array($valid, $message);
+    }
+
+    /**
+     * This function will sent an ALERT email when there are no more gift cards available and
+     * someone qualifies for one.
+     *
+     * @param $record_id
+     */
+    private function sendAlertEmailNoGiftCards($record_id) {
+
+        // Send alert email that we could not send reward to eligible participant
+        $emailTo = $this->alert_email;
+        $emailFrom = $this->email_from;
+        $emailSubject = "ALERT: No more Gift Cards available for Reward";
+        $emailBody = "Record $record_id is eligible for a gift card but there are none available.<br>".
+                     " Once there are more available gift cards available, make sure the eligibility logic for ".
+                     " record $record_id is still valid and re-save the record.";
+        $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody);
+        $this->module->emDebug("No Rewards Available Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody");
+        if (!$status) {
+            $this->module->emError("Attempted to send email to $emailTo but received error. Gift cards are exhausted - need more");
+        }
+
+        // Save the status in the record to show that we were not able to send them a reward
+        $saveRecord[$record_id][$this->fk_event_id] = "Unavailable - no gift cards available";
+        $saveStatus = REDCap::saveData($this->project_id, 'array', $saveRecord);
+        if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
+            $this->module->emError("Problem saving status to project $this->project_id record $record_id");
+        }
     }
 
     /**
@@ -263,15 +315,12 @@ class RewardInstance
 
         $data = REDCap::getData($this->gcr_pid, 'array', null, $gcr_required_fields, $this->gcr_event_id,
             null, null, null, null, $filter);
-        if (empty($data)) {
-            $this->module->emDebug("Retrieved rewards from Library: ", $data);
-        }
 
         return $data;
     }
 
     /**
-     * The recipient is eligible for a reward so email them their reward.
+     * The recipient is eligible for a reward so email them their verification email.
      * The gift card library record is updated so the reward is reserved. Also, the
      * gift card project record is updated to show that a reward was sent to the recipient.
      *
@@ -284,8 +333,15 @@ class RewardInstance
         $message = '';
         $gcr_record_id = $reward_record[$this->gcr_pk];
 
-        // Send the reward to the recipient
-        $status = $this->sendReward($record_id);
+        // Create a unique hash for this reward (record/reward)
+        $hash = $this->createRewardHash($record_id);
+
+        // Create the URL for this reward. Add on the project and hash
+        $url = $this->module->getUrl("src/DisplayReward", TRUE, TRUE);
+        $url .= "&pid=" . strval($this->project_id) . "&token=" . $hash;
+
+        // Send the verification email to the recipient
+        $status = $this->sendEmailWithLinkToReward($url, $record_id);
         if ($status) {
 
             // If the email was successfully sent, update the Gift Card Library to reserve this reward
@@ -294,6 +350,8 @@ class RewardInstance
             $reward_record['reward_pid'] = $this->project_id;
             $reward_record['reward_record'] = $record_id;
             $reward_record['reserved_ts'] = date('Y-m-d H:i:s');
+            $reward_record['reward_hash'] = $hash;
+            $reward_record['url'] = $url;
 
             // Format the data the way REDCap wants it
             $saveData = array();
@@ -302,7 +360,7 @@ class RewardInstance
             if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
                 $status = "<li>Problem saving Gift Card Library updates for record $gcr_record_id in project ". $this->gcr_pid . "</li>";
                 $message .= $status;
-                $this->module->emLog($status);
+                $this->module->emError($status);
             }
 
             // Update the record in this project to save which record we are reserving from the Gift Card Library
@@ -315,7 +373,7 @@ class RewardInstance
             if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
                 $status = "Problem saving Gift Card project updates for record $record in project $this->project_id";
                 $message .= "<li>" . $status . "</li>";
-                $this->module->emLog($status);
+                $this->module->emError($status);
             }
 
         } else {
@@ -331,55 +389,60 @@ class RewardInstance
     }
 
     /**
-     * Send the recipient their gift card
+     * Send the recipient and email with a link so they can retrieve their gift card
      *
      * @param $record_id
      * @return bool
      */
-    private function sendReward($record_id) {
+    private function sendEmailWithLinkToReward($url, $record_id) {
 
-        $body = "This is your gift card reward for participating in our survey.";
-        if (!empty($this->email_header)) {
-            $email_body = $this->email_header . "<br>" . $body;
+        // Set up the verification email to send to the recipient
+        $bodyDescription = 'To access your gift card reward, please select the link below:<br>'.
+                           '<a href="' . $url . '">' . $url. '</a>';
+        $emailTo = $this->email_address;
+        $emailFrom = $this->email_from;
+        $subject = $this->email_verification_subject;
+        $emailSubject = Piping::replaceVariablesInLabel($subject, $record_id, $this->fk_event_id, array(), false, null, false);
+
+        if (!empty($this->email_verification_header)) {
+            $body = $this->email_verification_header . "<br>" . $bodyDescription;
+            $emailBody = Piping::replaceVariablesInLabel($body, $record_id, $this->fk_event_id, array(), false, null, false);
         } else {
-            $email_body = $body;
+            $emailBody = $bodyDescription;
         }
 
-        $email = new Message();
-        $email->setTo($this->email);
-        $email->setFrom($this->from_email);
-        $email->setSubject($this->email_subject);
-        $email->setBody($email_body);
-        $sendStatus = $email->send();
-        if ($sendStatus == false) {
-            $this->module->emLog("Error sending email for " . $this->title . " reward for record $record_id - send error " . $email->getSendError(), json_encode($email));
-            return false;
-        } else {
-            $this->module->emError("Email was successfully sent for " . $this->title . " reward for record $record_id", json_encode($email));
-            return true;
-        }
+        $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody);
+        $this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody");
+
+        return $status;
     }
 
     /**
-     * Retrieve any info we need about the Gift Card Library here.  Right now, if an event id is not
-     * specified in the config file, retrieve it.  Also, store the primary key for later use.
+     * This function will generate an unique hash for each reward. Each hash has 15 characters.
      *
-     * @throws \Exception
+     * @param $record_id
+     * @return string - newly created unique 15 character hash
      */
-    private function getGiftCardLibraryParams() {
+    private function createRewardHash($record_id) {
 
-        $gcr_proj = new Project($this->gcr_pid);
-        $gcr_proj->setRepeatingFormsEvents();
+        $hashList = array();
 
-        // Make sure we have an event_id in the gift card rewards project
-        if (!isset($this->gcr_event_id) && ($gcr_proj->numEvents === 1)) {
-             // If this project has only 1 event id and it wasn't specified, then set it.
-            $this->gcr_event_id = array_keys($gcr_proj->eventInfo)[0];
-        } else if (!isset($this->gcr_event_id)) {
-            $this->module->emError("Gift Card Libary has more than 1 event - select one through the External Module Configuration");
+        // Retrieve the current hashes so we can make sure this newly generated one is unique
+        $recordHashes = REDCap::getData($this->gcr_pid, 'array', null, array('reward_hash'), $this->gcr_event_id);
+        foreach ($recordHashes as $record => $event) {
+            foreach($event[$this->gcr_event_id] as $fieldname => $recordHash) {
+                $hashList[] = $recordHash;
+            }
         }
 
-        $this->gcr_pk = $gcr_proj->table_pk;
+        $hash = null;
+        while(is_null($hash) || in_array($hash, $hashList)) {
+            $hash = generateRandomHash(15, false, false, false);
+            $this->module->emDebug("For record $record_id, new random hash: " . $hash);
+        }
+
+        return $hash;
     }
+
 
 }

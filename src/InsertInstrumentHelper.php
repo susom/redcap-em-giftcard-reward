@@ -6,7 +6,6 @@ use \MetaData;
 use \ZipArchive;
 
 require_once APP_PATH_DOCROOT . 'Design/functions.php';
-// require_once "../emLoggerTrait.php";
 
 /**
  * Class InsertInstrumentHelper

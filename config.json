@@ -149,7 +149,7 @@
         {
           "key": "reward-email-verification-subject",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Subject</span></h6>If <b>Force Email Verification</b> is checked, an email with this subject will be sent first.",
-          "required": false,
+          "required": true,
           "type": "text"
         },
         {

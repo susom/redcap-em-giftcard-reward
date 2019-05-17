@@ -95,8 +95,11 @@ class RewardInstance
         $message = $this->checkForEmptyField($this->logic, "Reward Logic", $message);
         $message = $this->checkForEmptyField($this->fk_field, "Reward ID Field", $message);
         $message = $this->checkForEmptyField($this->gc_status, "Reward ID Status Field", $message);
-        $message = $this->checkForEmptyField($this->email, "Reward Email Address", $message);
+        $message = $this->checkForEmptyField($this->email, "Reward Email Address Field", $message);
+        $message = $this->checkForEmptyField($this->email_from, "Email From Address", $message);
         $message = $this->checkForEmptyField($this->email_subject, "Reward Email Subject", $message);
+        $message = $this->checkForEmptyField($this->email_verification_subject, "Verification Email Subject", $message);
+
         if ($message !== '') {
             $message = "<li>" . $message . "</li>";
         }

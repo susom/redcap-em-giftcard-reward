@@ -54,6 +54,18 @@ GiftCardRewardConfig = {
     },
 
 
+    createStatusDiv: function(id) {
+        this.statusDiv = $('<div></div>')
+            .attr('id', id);
+        this.statusDiv
+            .wrap( $('<td>', { id: 'config-th', colspan: '3' }) )
+            .parent()
+            .wrap('<tr>')
+            .parent()
+            .prependTo('.modal-body tbody');
+    },
+
+
     getStatus: function () {
         // Assemble data from modal form
         var raw = this.getRawForm();

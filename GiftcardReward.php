@@ -190,8 +190,14 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
     public function verifyGiftCardRepo($gcr_pid, $gcr_event_id) {
 
         $this->emDebug("This is the Library pid $gcr_pid and event $gcr_event_id");
-        $message = array();
-        $title = "<b>Gift Card Library:</b><br>";
+        $message = '';
+        $title = "<b>Gift Card Library:</b>";
+
+        // Make sure entries were made for gift card library project
+        if (empty($gcr_pid)) {
+            $message = $title . "<li>Select a project</li>";
+            return array(false, array($message));
+        }
 
         // Setup the data dictionary so we can check for the requird fields
         $gcr_proj = new Project($gcr_pid);
@@ -201,7 +207,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         // Make sure we have a correct event_id in the gift card rewards project
         if (($gcr_proj->numEvents > 1) && empty($gcr_event_id)) {
             // If this project has more than 1 event, the event id must be specified
-            $message[] = $title . "<li>This project $gcr_pid contains more than 1 event, you must specify which event to use:</li>";
+            $message = $title . "<li>This project $gcr_pid contains more than 1 event, you must specify which event to use:</li>";
         } else {
             // If this project has only 1 event id and it wasn't specified, then set it.
             if (empty($gcr_event_id)) {
@@ -213,13 +219,13 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         if (!empty($gcr_event_id)) {
             $found = (isset($gcr_proj->eventInfo[$gcr_event_id]) ? true : false);
             if (!$found) {
-                $message[] = $title . "<li>This event ID $gcr_event_id does not belong to project $gcr_pid</li>";
+                $message = $title . "<li>This event ID $gcr_event_id does not belong to project $gcr_pid</li>";
             }
         }
 
         // If we don't have a valid event_id for this project, we cannot continue.
         if (!empty($message)) {
-            return array(false, $message);
+            return array(false, array($message));
         }
 
         // Make sure all the fields we are expecting to be available in the gift card library project are in the event_id
@@ -237,19 +243,19 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $fields_not_found = array_diff($this->gcr_required_fields, $all_event_fields);
 
         if (!empty($fields_not_found)) {
-            $message[] = $title . "<li>Required fields not found in the Gift Card Rewards project $gcr_pid event id $gcr_event_id are: " . implode(',', $fields_not_found) . "</li>";
+            $message = $title . "<li>Required fields not found in the Gift Card Rewards project $gcr_pid event id $gcr_event_id are: " . implode(',', $fields_not_found) . "</li>";
         }
 
         // Make sure this form is not a repeating form and not in a repeating event
         $repeat_forms = $gcr_proj->RepeatingFormsEvents[$gcr_event_id];
         if (!empty($repeat_forms)) {
             if ($repeat_forms == 'WHOLE') {
-                $message[] = $title . "<li>The Gift Card Rewards instruments cannot be a repeating event for project $gcr_pid event id $gcr_event_id </li>";
+                $message = (empty($message) ? $title : $message) . "<li>The Gift Card Rewards instruments cannot be a repeating event for project $gcr_pid event id $gcr_event_id </li>";
             } else {
                 $gcr_repeat_forms = array_keys($repeat_forms);
                 $intersection = array_intersect($all_event_forms, $gcr_repeat_forms);
                 if (!empty($intersection)) {
-                    $message[] = $title . "<li>The Gift Card Rewards instrument(s) " . implode(',', $intersection) . " cannot be a repeating form for project $gcr_pid event id $gcr_event_id</li>";
+                    $message = (empty($message) ? $title : $message) . "<li>The Gift Card Rewards instrument(s) " . implode(',', $intersection) . " cannot be a repeating form for project $gcr_pid event id $gcr_event_id</li>";
                 }
             }
         }
@@ -259,14 +265,14 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         if (empty($missing_timestamp_fields)) {
             if (($gcr_proj->metadata['reserved_ts']['element_validation_type'] != 'datetime_seconds_ymd') ||
                 ($gcr_proj->metadata['claimed_ts']['element_validation_type'] != 'datetime_seconds_ymd')) {
-                $message[] = $title . "<li>The timestamps must be in format 'Y-M-D H:M:S - please change the Gift Card Rewards instrument.</li>";
+                $message = (empty($message) ? $title : $message) . "<li>The timestamps in the Gift Card Library must be formatted as 'Y-M-D H:M:S'.</li>";
             }
         }
 
         if (empty($message)) {
             return array(true, null);
         } else {
-            return array(false, $message);
+            return array(false, array($message));
         }
     }
 

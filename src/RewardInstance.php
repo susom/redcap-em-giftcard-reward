@@ -248,7 +248,7 @@ class RewardInstance
         // Send alert email that we could not send reward to eligible participant
         $emailTo = $this->alert_email;
         $emailFrom = $this->email_from;
-        $emailSubject = "ALERT: No more Gift Cards available for Reward";
+        $emailSubject = "ALERT: No more Gift Cards available for Reward $this->title";
         $emailBody = "Record $record_id is eligible for a gift card but there are none available.<br>".
                      " Once there are more available gift cards available, make sure the eligibility logic for ".
                      " record $record_id is still valid and re-save the record.";
@@ -259,7 +259,7 @@ class RewardInstance
         }
 
         // Save the status in the record to show that we were not able to send them a reward
-        $saveRecord[$record_id][$this->fk_event_id] = "Unavailable - no gift cards available";
+        $saveRecord[$record_id][$this->fk_event_id][$this->gc_status] = "Unavailable - no gift cards available";
         $saveStatus = REDCap::saveData($this->project_id, 'array', $saveRecord);
         if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
             $this->module->emError("Problem saving status to project $this->project_id record $record_id");
@@ -340,7 +340,7 @@ class RewardInstance
         $hash = $this->createRewardHash($record_id);
 
         // Create the URL for this reward. Add on the project and hash
-        $url = $this->module->getUrl("src/DisplayReward", TRUE, TRUE);
+        $url = $this->module->getUrl("src/DisplayReward.php", true, true);
         $url .= "&pid=" . strval($this->project_id) . "&token=" . $hash;
 
         // Send the verification email to the recipient

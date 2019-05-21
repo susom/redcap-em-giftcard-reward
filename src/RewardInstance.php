@@ -397,7 +397,7 @@ class RewardInstance
 
         // Create the URL for this reward. Add on the project and hash
         $url = $this->module->getUrl("src/DisplayReward.php", true, true);
-        $url .= "&pid=" . strval($this->project_id) . "&token=" . $hash;
+        $url .= "&token=" . $hash;
 
         // Send the verification email to the recipient
         $status = $this->sendEmailWithLinkToReward($url, $record_id);

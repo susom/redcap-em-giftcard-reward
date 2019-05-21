@@ -2,7 +2,8 @@
 namespace Stanford\GiftcardReward;
 /** @var \Stanford\GiftcardReward\GiftcardReward $module */
 
-//require_once ("../src/InsertInstrumentHelper.php");
+require_once $module->getModulePath() .  "util/GiftCardUtils.php";
+
 use \Exception;
 
 // HANDLE BUTTON ACTION
@@ -57,7 +58,7 @@ if (!empty($_POST['action'])) {
             // $module->emDebug("formatted settings: ", $data);
 
             try {
-                list($resultLib, $messageLib) = $module->verifyGiftCardRepo($gclPid, $gclEventID);
+                list($resultLib, $messageLib) = verifyGiftCardRepo($gclPid, $gclEventID);
             } catch (Exception $ex) {
                 $module->emError("Exception when verifying Gift Card library in verifyGiftCardRepo");
             }

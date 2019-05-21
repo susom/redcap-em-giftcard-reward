@@ -2,7 +2,8 @@
 
 namespace Stanford\GiftcardReward;
 
-use \Exception;
+use Exception;
+use ExternalModules\ExternalModules;
 
 require_once "emLoggerTrait.php";
 require_once "src/InsertInstrumentHelper.php";
@@ -180,32 +181,20 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
     public function giftCardCron () {
 
         // Find all the projects that are using the Gift Card Rewards EM
-        $sql = "select project_id from redcap_external_module_settings ems, redcap_external_modules rem
-        where ems.external_module_id = rem.external_module_id
-        and rem.directory_prefix = 'giftcard-reward'
-        and rem.external_module_id = ems.external_module_id
-        and ems.`key` = 'enabled' and ems.value='true'";
+        $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 
-        $result = db_query($sql);
-        while($row = db_fetch_array($result)) {
+        while($row = db_fetch_assoc($enabled)) {
 
             $proj_id = $row['project_id'];
 
             // Create the API URL to this project
-            $dailySummaryURL = $this->getUrl('DailySummary.php?pid=' . $proj_id, true, true);
+            $dailySummaryURL = $this->getUrl('src/DailySummary.php?pid=' . $proj_id, false, true);
             $this->emDebug("Calling cron Daily Summary for project $proj_id at URL " . $dailySummaryURL);
 
             // Call the project through the API so it will be in project context
-            $curl = curl_init();
-            curl_setopt($curl, CURLOPT_POST, 1);
-            curl_setopt($curl, CURLOPT_URL, $dailySummaryURL);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+            $response = http_get($dailySummaryURL);
 
-            $result = curl_exec($curl);
-
-            curl_close($curl);
-
-            $this->emDebug("Back from API call for project $proj_id: " . $result);
+            $this->emDebug("Back from API call for project $proj_id: ", $response);
         }
     }
 

@@ -66,8 +66,8 @@ foreach ($configs as $configNum => $config) {
 }
 
 // Only send one email for each project
-//$status = REDCap::email($alert_email, $alert_email, "Gift Card Daily Summary for project $pid", $body);
-//return;
+$status = REDCap::email($alert_email, $alert_email, "Gift Card Daily Summary for project $pid", $body);
+return;
 
 /**
  * This function will take the gift card library summary data and format it to a readable form.
@@ -97,32 +97,3 @@ function createConfigSummary($configNum, $stats) {
 
     return $message;
 }
-
-
-?>
-
-<!DOCTYPE html>
-<html lang="en">
-    <header>
-        <title>Gift Card Summary Display</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
-
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-        <style type="text/css">
-            table {max-height: 250px; margin-top:100px; text-align: center;}
-        </style>
-
-    </header>
-
-    <body>
-        <div class="container">
-            <div class="row">
-                <div>
-                    <?php echo $body; ?>
-                </div>
-            </div>  <!-- end row -->
-        </div>  <!-- end container -->
-    </body>
-
-</html>

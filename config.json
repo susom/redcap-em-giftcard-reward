@@ -35,8 +35,7 @@
   },
 
   "no-auth-pages": [
-    "src/DisplayReward",
-    "src/DailySummary"
+    "src/DisplayReward"
   ],
 
   "system-settings": [

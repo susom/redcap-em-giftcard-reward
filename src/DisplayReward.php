@@ -8,6 +8,15 @@ use REDCap;
 $gcToken = isset($_GET['token']) && !empty($_GET['token']) ? $_GET['token'] : null;
 $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
 
+/*
+ * This page is called from a link sent to the gift card recipients in email. The status in the gift card library
+ * designated this reward as reserved until the recipient comes here. The gift card library project record status
+ * is then changed from Reserved to Claimed and a timestamp is saved.
+ *
+ * The information needed to redeem a gift card is displayed to the recipient and an email is sent with the same
+ * information.
+ */
+
 $module->emDebug("Processing request for token $gcToken for project $pid");
 
 $gcConfig = array();

@@ -161,7 +161,6 @@ if (!empty($_POST['action'])) {
          */
     }
 
-    $module->emLog("Before POST Return: message " . $message);
     header('Content-Type: application/json');
     echo json_encode(
         array(

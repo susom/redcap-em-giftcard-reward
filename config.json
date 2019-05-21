@@ -35,7 +35,8 @@
   },
 
   "no-auth-pages": [
-    "src/DisplayReward"
+    "src/DisplayReward",
+    "src/DailySummary"
   ],
 
   "system-settings": [
@@ -71,6 +72,18 @@
     {
       "key": "gcr-event-id",
       "name": "<span class='text-lg badge badge-lg badge-secondary'>GCR Event ID</span><br>If the Gift Card Repository is longitudinal, specify the numerical <u>Event ID</u> where the form resides<br>Leave blank for classical.  Must be a number.",
+      "required": false,
+      "type": "number"
+    },
+    {
+      "key": "alert-email",
+      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>Alert Email</h6></span>In the event gift cards are exhausted or any other error occurs, an email will be sent to this email address",
+      "required": true,
+      "type": "text"
+    },
+    {
+      "key": "maximum-frequency",
+      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>Maximum Frequency</h6></span>(optional) Not yet implemented. Enter a maximum number of gift cards to issue from this project in a 24 hour period.  If the actual number exceeds this number, no more gift cards will be allowed and the alert-email above will be notified.",
       "required": false,
       "type": "number"
     },
@@ -153,24 +166,36 @@
           "type": "text"
         },
         {
-          "key": "reward-email-verification-header",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Header</span></h6>If <b>Force Email Verification</b> is checked, this header will be prepended to the directions to access the gift card.",
+          "key": "options",
+          "name": "<h6 style='color:red;text-align:center'>Notification Options</h6>The following are options to keep you informed about your gift card library. As a default, you will receive email notifications for these events:<br><ul><li>There are no gifts available but a participant qualifies for one.</li><li>A daily summary describing the gift card library status.</li></ul>",
           "required": false,
-          "type": "rich-text"
+          "type": "descriptive"
+        },
+        {
+          "key": "optout-low-balance",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Opt-Out Low Balance Notification</span></h6>When <b>Opt-Out Low Balance Notification</b> is checked, email notifications will not be sent to the email address in the <b>Alert Email</b> field when the number of available rewards drops below the threshold number.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "low-balance-number",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Low Balance Threshold</span></h6>If a number is entered and the checkbox to <b>Opt-Out Low Balance Notifications</b> is not selected, an email will be sent to the Alert Email address when the number of available rewards falls below this number. When left empty, emails will only be sent when a participant is eligible but there are none to send.",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "key": "optout-daily-summary",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Opt-Out Daily Summary</span></h6>When <b>Opt-Out Daily Summary</b> is checked, the daily report will <b>not</b> be sent to the Alert Email which details the daily activity for the gift card processing project.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "allow-multiple-rewards",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Allow Multiple Rewards</span></h6>When <b>Allow Multiple Rewards</b> is checked, this header will be prepended to the directions to access the gift card.",
+          "required": false,
+          "type": "checkbox"
         }
       ]
-    },
-    {
-      "key": "alert-email",
-      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>Alert Email</h6></span>(optional) In the event gift cards are exhausted or any other error occurs, an email will be sent to this email address",
-      "required": false,
-      "type": "text"
-    },
-    {
-      "key": "maximum-frequency",
-      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>Maximum Frequency</h6></span>(optional) Enter a maximum number of gift cards to issue from this project in a 24 hour period.  If the actual number exceeds this number, no more gift cards will be allowed and the alert-email above will be notified.",
-      "required": false,
-      "type": "number"
     }
   ]
 

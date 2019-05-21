@@ -4,7 +4,6 @@ namespace Stanford\GiftcardReward;
 use Piping;
 use \Project;
 use \REDCap;
-use \Message;
 use \Exception;
 
 class RewardInstance
@@ -17,9 +16,11 @@ class RewardInstance
         $email_verification_subject, $email_verification_header,
         $email_from, $email_address;
 
+    private $optout_low_balance, $low_balance_number, $optout_daily_summary, $allow_multiple_rewards;
+
     private $gcr_pid, $gcr_event_id, $gcr_pk;
 
-    public function __construct($module, $gcr_pid, $gcr_event_id, $instance)
+    public function __construct($module, $gcr_pid, $gcr_event_id, $alert_email, $instance)
     {
         // These are Gift Card project parameters
         global $Proj;
@@ -44,7 +45,12 @@ class RewardInstance
         $this->email_verification           = $instance['reward-email-verification'];
         $this->email_verification_subject   = $instance['reward-email-verification-subject'];
         $this->email_verification_header    = $instance['reward-email-verification-header'];
-        $this->alert_email                  = $instance['alert-email'];
+        $this->alert_email                  = $alert_email;
+
+        // There are gift card options
+        $this->optout_low_balance           = $instance['optout-low-balance'];
+        $this->low_balance_number           = $instance['low-balance-number'];
+        $this->allow_multiple_rewards       = $instance['allow-multiple-rewards'];
 
         // There are gift card library parameters
         $this->gcr_pid = $gcr_pid;
@@ -55,7 +61,6 @@ class RewardInstance
             $this->module->emError("Exception caught initializing RewardInstance for project $this->project_id");
         }
     }
-
 
     /**
      * Retrieve any info we need about the Gift Card Library here.  Right now, if an event id is not
@@ -210,14 +215,15 @@ class RewardInstance
      * This record qualifies for a reward so process it.
      *
      * @param $record_id
-     * @param $gcr_required_fields
      * @return array
      */
-    public function processReward($record_id, $gcr_required_fields) {
+    public function processReward($record_id) {
 
         $message = '';
         $valid = false;
 
+
+        $gcr_required_fields = getGiftCardLibraryFields();
         // We found that this user is eligible for an gift card, so find the next award that fits our criteria
         list($found, $reward_record) = $this->findNextAvailableReward($gcr_required_fields);
         if (!$found) {
@@ -230,6 +236,15 @@ class RewardInstance
 
         } else {
 
+            // Check to see if this participant has already been rewarded a gift card. If so, don't
+            // send another one unless the configuation checkbox was selected that it is okay to send.
+            list($valid, $message) = $this->checkForPreviousReward($record_id);
+            if (!$valid) {
+
+                // Even though it is not valid to send a reward, we are successfully done processing
+                return array(true, $message);
+            }
+
             // There is a valid reward available so reserve it
             list($valid, $message) = $this->reserveReward($record_id, $reward_record);
         }
@@ -238,25 +253,28 @@ class RewardInstance
     }
 
     /**
-     * This function will sent an ALERT email when there are no more gift cards available and
+     * This function will send an ALERT email when there are no more gift cards available and
      * someone qualifies for one.
      *
      * @param $record_id
      */
     private function sendAlertEmailNoGiftCards($record_id) {
 
+        global $redcap_version;
+
+        // Put together the URL to this redcap record so we can include it in the email.
+        $recordUrl = APP_PATH_WEBROOT_FULL . "redcap_v{$redcap_version}/DataEntry/record_home.php?pid=$this->project_id&id=$record_id";
+
         // Send alert email that we could not send reward to eligible participant
         $emailTo = $this->alert_email;
-        $emailFrom = $this->email_from;
+        $emailFrom = $this->alert_email;
         $emailSubject = "ALERT: No more Gift Cards available for Reward $this->title";
         $emailBody = "Record $record_id is eligible for a gift card but there are none available.<br>".
                      " Once there are more available gift cards available, make sure the eligibility logic for ".
-                     " record $record_id is still valid and re-save the record.";
-        $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody);
-        $this->module->emDebug("No Rewards Available Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody");
-        if (!$status) {
-            $this->module->emError("Attempted to send email to $emailTo but received error. Gift cards are exhausted - need more");
-        }
+                     " is still valid and re-save the record.<br>".
+                     " Link to record: <br>".
+                     " <a href='$recordUrl'>Record $record_id</a>";
+        $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody);
 
         // Save the status in the record to show that we were not able to send them a reward
         $saveRecord[$record_id][$this->fk_event_id][$this->gc_status] = "Unavailable - no gift cards available";
@@ -267,30 +285,26 @@ class RewardInstance
     }
 
     /**
-     * This is currently unused but it can be used if someone wants to know how many rewards in the
-     * library meet the criteria for this reward configuration.
-     *
-     * @param $gcr_required_fields
-     * @return int
-     */
-    public function numberAvailableRewards($gcr_required_fields) {
-
-        // Find the number of available rewards
-        $data = $this->retrieveGiftCardRewardsList($gcr_required_fields);
-        return count($data);
-    }
-
-    /**
      * This function finds the first available reward record from the library
      *
      * @param $gcr_required_fields
      * @return array -
      *          1) true/false - was reward record found
-     *          2) if true, reward record
+     *          2) if true, reward record otherwise null
      */
     private function findNextAvailableReward($gcr_required_fields) {
 
+        // Retrieve all available gift cards for this reward
         $data = $this->retrieveGiftCardRewardsList($gcr_required_fields);
+
+        // Check to see if there was threshold limit entered and if so, are we below it. If there are no rewards available,
+        // we will be sending them email about this participant so don't send another email here.
+        if (!$this->optout_low_balance and !empty($this->low_balance_number) and
+                (count($data) < $this->low_balance_number) and (count($data) > 0)) {
+            $emailBody = "There are " . (count($data)-1) . " rewards available for gift card configuation " . $this->title;
+            $status = $this->sendEmail($this->alert_email, $this->alert_email, "Gift Card Low Balance Notification", $emailBody);
+        }
+
         if (empty($data)) {
             return array(false, "No Reward Found");
         } else {
@@ -318,8 +332,50 @@ class RewardInstance
 
         $data = REDCap::getData($this->gcr_pid, 'array', null, $gcr_required_fields, $this->gcr_event_id,
             null, null, null, null, $filter);
-
         return $data;
+    }
+
+    /**
+     * This function will check to see if the email address listed in this record has already received a reward.
+     * If a reward has already been issued, do not issue another one.  To allow multiple rewards, there is a
+     * checkbox in the configuration file that will allow this check to be bypassed.
+     *
+     * @param $record_id
+     * @return array
+     *          -- true/false - should reward be sent
+     *          -- if false, message why the reward will not be sent, otherwise null
+     */
+    private function checkForPreviousReward($record_id) {
+
+        $message = '';
+
+        // Check to see if this email address already received a gift card or if the checkbox
+        // is checked that allows an email to receive multiple rewards.
+        if (!$this->allow_multiple_rewards && !empty($this->email_address)) {
+            $projFilter = "[" . $this->email . "] = '" . $this->email_address .
+                "' and (([". $this->gc_status . "] = 'Reserved') or ([" . $this->gc_status . "] = 'Viewed'))";
+            $projData = REDCap::getData($this->project_id, 'array', null, array($this->email_address), $this->fk_event_id,
+                null, null, null, null, $projFilter);
+            if (!empty($projData)) {
+                $message = "Duplicate email addresss $this->email_address for reward $this->title and record $record_id";
+
+                // Update the status for this record to say they were not sent a reward because it is a duplicate
+                $record[$this->gc_status] = 'Duplicate email';
+                $this->module->emDebug("This email, $this->email_address in record $record_id, has already been sent a reward - not sending another.");
+
+                $saveData = array();
+                $saveData[$record_id][$this->fk_event_id] = $record;
+                $saveStatus = REDCap::saveData($this->project_id, 'array', $saveData, 'overwrite');
+                if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
+                    $status = "Duplicate email for $record in project $this->project_id";
+                    $this->module->emError($status);
+                }
+
+                return array(false, $message);
+            }
+        }
+
+        return (array(true, null));
     }
 
     /**
@@ -395,7 +451,7 @@ class RewardInstance
      * Send the recipient and email with a link so they can retrieve their gift card
      *
      * @param $record_id
-     * @return bool
+     * @return bool - Status of the sending of the email
      */
     private function sendEmailWithLinkToReward($url, $record_id) {
 
@@ -414,7 +470,7 @@ class RewardInstance
             $emailBody = $bodyDescription;
         }
 
-        $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody);
+        $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody);
         $this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody");
 
         return $status;
@@ -445,6 +501,140 @@ class RewardInstance
         }
 
         return $hash;
+    }
+
+    /**
+     * This function is called from the nightly cron for each gift card configuration that has not opted-out of receiving it.
+     * The gift card library will be checked for the following:
+     *          1) how many gift card rewards were sent in email yesterday
+     *          2) How many gift card rewards were viewed(claimed) yesterday
+     *          3) How many gift cards were sent > 7 days ago and have not been viewed
+     *          4) How many gift cards were sent < 7 days ago and have not been viewed
+     *          5) How many gift cards are still Ready to be awarded
+     *          6) How many gift cards in total have been awarded
+     *
+     * @return array
+     */
+    public function retrieveSummaryData() {
+
+        $rewards_sent_yesterday = 0;
+        $rewards_claimed_yesterday = 0;
+        $num_gc_sent_more_than_7days_ago = 0;
+        $num_gc_send_less_than_7days_ago = 0;
+        $num_gc_notready = 0;
+        $num_gc_available = 0;
+        $num_gc_awarded = 0;
+        $num_gc_claimed = 0;
+        $today = strtotime(date('Y-m-d'));
+
+        // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount)
+        $filter = "[amount] = '" . $this->amount . "'";
+        $data = REDCap::getData($this->gcr_pid, 'array', null, null, $this->gcr_event_id, null, null, null, null, $filter);
+        if (!empty($data)) {
+            foreach ($data as $record_id => $event_info) {
+                foreach ($event_info as $event_id => $record) {
+
+                    // Convert timestamps so we can do date math
+                    $datetime_sent = strtotime(date($record['reserved_ts']));
+                    $date_sent = strtotime(date("Y-m-d", $datetime_sent));
+
+                    if ($record['claimed_ts'] !== '') {
+                        $datetime_claimed = strtotime(date($record['claimed_ts']));
+                        $date_claimed = strtotime(date("Y-m-d", $datetime_claimed));
+                    } else {
+                        $date_claimed = '';
+                    }
+                    $status = $record['status'];
+                    $num_days_sent = intval(($today - $date_sent)/86400);
+                    $num_days_claimed = intval(($today - $date_claimed)/86400);
+
+                    // Num of gift cards sent yesterday
+                    if (($num_days_sent == 1) && (!empty($record['reserved_ts']))) {
+                        $rewards_sent_yesterday++;
+                    }
+
+                    // Num of gift cards claimed yesterday
+                    if (($num_days_claimed == 1) && ($status == 3)) {
+                        $rewards_claimed_yesterday++;
+                    }
+
+                    // Num of gift cards sent > 7 days ago and have not been viewed
+                    if (($num_days_sent > 7) && ($status == 2)) {
+                        $num_gc_sent_more_than_7days_ago++;
+                    }
+
+                    // Num of gift cards sent < 7 days ago and have not been viewed
+                    if (($num_days_sent <= 7) && ($status == 2)) {
+                        $num_gc_send_less_than_7days_ago++;
+                    }
+
+                    // Num of gift cards with NOT Ready status (value of 0)
+                    if ($status == 0) {
+                        $num_gc_notready++;
+                    }
+
+                    // Num of gift cards with Ready status (value of 1 means Ready)
+                    if ($status == 1) {
+                        $num_gc_available++;
+                    }
+
+                    // Num of gift cards in total have been awarded
+                    if (($status == 2) || ($status == 3)) {
+                        $num_gc_awarded++;
+                    }
+
+                    // Num of gift cards in total have been claimed
+                    if ($status == 3) {
+                        $num_gc_claimed++;
+                    }
+
+                }
+            }
+
+        } else {
+            $this->module->emError("No data was found for DailySummary from gc library [pid:$this->gcr_pid/event id:$this->gcr_event_id]");
+        }
+
+        $results = array(
+            "sent_yesterday"        => $rewards_sent_yesterday,
+            "claimed_yesterday"     => $rewards_claimed_yesterday,
+            "sent_gt7days_ago"      => $num_gc_sent_more_than_7days_ago,
+            "sent_lt7days_ago"      => $num_gc_send_less_than_7days_ago,
+            "not_ready"             => $num_gc_notready,
+            "num_available"         => $num_gc_available,
+            "num_awarded"           => $num_gc_awarded,
+            "num_claimed"           => $num_gc_claimed
+        );
+
+        return $results;
+    }
+
+    /**
+     * This is just a wrapper for the REDCap emailer to make it easier to log messages.
+     *
+     * @param $emailTo - Email address in To field
+     * @param $emailFrom - Email address in From field
+     * @param $emailSubject - Email subject
+     * @param $emailBody - Email Body
+     * @return bool - true/false if email was successfully sent
+     */
+    private function sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody) {
+
+        $this->module->emDebug("In sendEmail: To " . $emailTo . ", and From " . $emailFrom . ", email Subject " . "$emailSubject" .
+            " email Body: " . $emailBody);
+
+        $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody);
+        if (!$status) {
+            $email = array(
+                "To:"       => $emailTo,
+                "From:"     => $emailFrom,
+                "Subject:"  => $emailSubject,
+                "Body:"     => $emailBody
+            );
+            $this->module->emError("Attempted to send email to $emailTo but received error.", json_encode($email));
+        }
+
+        return $status;
     }
 
 

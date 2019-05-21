@@ -2,13 +2,12 @@
 
 namespace Stanford\GiftcardReward;
 
-use ExternalModules\ExternalModules;
-use \Project;
 use \Exception;
 
 require_once "emLoggerTrait.php";
 require_once "src/InsertInstrumentHelper.php";
 require_once "src/RewardInstance.php";
+require_once "util/GiftCardUtils.php";
 
 /**
  * Class GiftcardReward
@@ -18,12 +17,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 {
 
     use emLoggerTrait;
-
-    // These are required fields for the gift card library.  If any of these fields are not
-    // present, we cannot continue.  We will give the option to update a form with these fields.
-    protected $gcr_required_fields = array('reward_id', 'egift_number', 'url', 'amount', 'status',
-                                    'reward_hash', 'reward_name', 'reward_pid', 'reward_record',
-                                    'reserved_ts', 'claimed_ts');
 
     /******************************************************************************************************************/
     /* HOOK METHODS                                                                                                   */
@@ -41,7 +34,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
         // First check the Gift Card Library to see if it is valid
         try {
-            list($validLib, $messageLib) = $this->verifyGiftCardRepo($gcr_pid, $gcr_event_id);
+            list($validLib, $messageLib) = verifyGiftCardRepo($gcr_pid, $gcr_event_id);
             if (!$validLib) {
                 $this->emError($messageLib);
             }
@@ -57,7 +50,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         if (!$validConfig) {
             $this->emError($mesageConfig);
         }
-
     }
 
     /**
@@ -83,10 +75,11 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         // Return the Reward configurations
         $gc_pid = $this->getProjectSetting("gcr-pid");
         $gc_event_id = $this->getProjectSetting("gcr-event-id");
+        $alert_email = $this->getProjectSetting("alert-email");
         $configs = $this->getSubSettings("rewards");
 
         foreach ($configs as $config => $config_info) {
-            $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $config_info);
+            $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $alert_email, $config_info);
             $status = $reward->verifyConfig();
             if ($status) {
                 $eligible = $reward->checkRewardStatus($record);
@@ -94,13 +87,13 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
                 if ($eligible) {
                     $message = "[PID:". $project_id . "] - record $record is eligible for " . $config_info["reward-title"] . " reward.";
                     $this->emDebug($message);
-                    list($rewardSent, $message) = $reward->processReward($record, $this->gcr_required_fields);
+                    list($rewardSent, $message) = $reward->processReward($record);
 
                     if ($rewardSent) {
-                        $message = "Reward for [$project_id] record $record was sent for " . $config_info["reward-title"] . " reward.";
+                        $message = "Finished processing reward for [$project_id] record $record for " . $config_info["reward-title"] . " reward.";
                         $this->emLog($message);
                     } else {
-                        $message .= "<br>ERROR: Reward for [PID:$project_id] record $record was NOT sent for " . $config_info["reward-title"] . " reward.";
+                        $message .= "<br>ERROR: Reward for [PID:$project_id] record $record for " . $config_info["reward-title"] . " reward was not processed.";
                         $this->emError($message);
                     }
                 }
@@ -110,7 +103,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
                 $this->emError($message);
             }
         }
-
     }
 
 
@@ -159,12 +151,13 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
         $errors = array();
         $overallStatus = true;
+        $alert_email = $this->getProjectSetting("alert-email");
 
         foreach ($instances as $i => $instance) {
 
             // Create a new reward instance and verify the config
             $this->emDebug("Configuration " . ($i+1) . " is: " . json_encode($instance));
-            $ri = new RewardInstance($this, $gcr_pid, $gcr_event_id, $instance);
+            $ri = new RewardInstance($this, $gcr_pid, $gcr_event_id, $alert_email, $instance);
 
             list($result,$message) = $ri->verifyConfig();
             if ($result === false) {
@@ -177,130 +170,42 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         return array($overallStatus, $errors);
     }
 
+    /******************************************************************************************************************/
+    /* CRON METHODS                                                                                                   */
+    /******************************************************************************************************************/
     /**
-     * This function performs checks on the gift card library to make sure it is valid. The checks are:
-     *  1) Make sure all available fields exist (list is listed at top of this class).
-     *  2) Make sure all the fields are in the same event
-     *  3) Make sure they do not reside on a repeating form or event
-     *  4) Make sure the timestamps are in the correct format (Y-M-D H:M:S)
-     *
-     * @return array
-     * @throws \Exception
+     * This function will be called by the Cron on a daily basis.  It will call DailySummary.php for each project that has
+     * this EM enabled via an API call (so that the project context is setup).
      */
-    public function verifyGiftCardRepo($gcr_pid, $gcr_event_id) {
+    public function giftCardCron () {
 
-        $this->emDebug("This is the Library pid $gcr_pid and event $gcr_event_id");
-        $message = '';
-        $title = "<b>Gift Card Library:</b>";
+        // Find all the projects that are using the Gift Card Rewards EM
+        $sql = "select project_id from redcap_external_module_settings ems, redcap_external_modules rem
+        where ems.external_module_id = rem.external_module_id
+        and rem.directory_prefix = 'giftcard-reward'
+        and rem.external_module_id = ems.external_module_id
+        and ems.`key` = 'enabled' and ems.value='true'";
 
-        // Make sure entries were made for gift card library project
-        if (empty($gcr_pid)) {
-            $message = $title . "<li>Select a project</li>";
-            return array(false, array($message));
-        }
+        $result = db_query($sql);
+        while($row = db_fetch_array($result)) {
 
-        // Setup the data dictionary so we can check for the requird fields
-        $gcr_proj = new Project($gcr_pid);
-        $gcr_proj->setRepeatingFormsEvents();
+            $proj_id = $row['project_id'];
 
-        // The event id was not given, go find it
-        // Make sure we have a correct event_id in the gift card rewards project
-        if (($gcr_proj->numEvents > 1) && empty($gcr_event_id)) {
-            // If this project has more than 1 event, the event id must be specified
-            $message = $title . "<li>This project $gcr_pid contains more than 1 event, you must specify which event to use:</li>";
-        } else {
-            // If this project has only 1 event id and it wasn't specified, then set it.
-            if (empty($gcr_event_id)) {
-                $gcr_event_id = array_keys($gcr_proj->eventInfo)[0];
-            }
-        }
+            // Create the API URL to this project
+            $dailySummaryURL = $this->getUrl('DailySummary.php?pid=' . $proj_id, true, true);
+            $this->emDebug("Calling cron Daily Summary for project $proj_id at URL " . $dailySummaryURL);
 
-        // Now check to make sure the event_id is part of this project
-        if (!empty($gcr_event_id)) {
-            $found = (isset($gcr_proj->eventInfo[$gcr_event_id]) ? true : false);
-            if (!$found) {
-                $message = $title . "<li>This event ID $gcr_event_id does not belong to project $gcr_pid</li>";
-            }
-        }
+            // Call the project through the API so it will be in project context
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_POST, 1);
+            curl_setopt($curl, CURLOPT_URL, $dailySummaryURL);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 
-        // If we don't have a valid event_id for this project, we cannot continue.
-        if (!empty($message)) {
-            return array(false, array($message));
-        }
+            $result = curl_exec($curl);
 
-        // Make sure all the fields we are expecting to be available in the gift card library project are in the event_id
-        $gcr_forms_in_event = $gcr_proj->eventsForms[$gcr_event_id];
-        $all_event_fields = array();
-        $all_event_forms = array();
+            curl_close($curl);
 
-        // Make an array of all the fields in all the forms in this event
-        foreach($gcr_forms_in_event as $form_num => $form_name) {
-            $all_event_forms[] = $gcr_proj->forms[$form_name];
-            $all_event_fields = array_merge($all_event_fields, array_keys($gcr_proj->forms[$form_name]['fields']));
-        }
-
-        // See if there are any required fields that are not found in the field list.
-        $fields_not_found = array_diff($this->gcr_required_fields, $all_event_fields);
-
-        if (!empty($fields_not_found)) {
-            $message = $title . "<li>Required fields not found in the Gift Card Rewards project $gcr_pid event id $gcr_event_id are: " . implode(',', $fields_not_found) . "</li>";
-        }
-
-        // Make sure this form is not a repeating form and not in a repeating event
-        $repeat_forms = $gcr_proj->RepeatingFormsEvents[$gcr_event_id];
-        if (!empty($repeat_forms)) {
-            if ($repeat_forms == 'WHOLE') {
-                $message = (empty($message) ? $title : $message) . "<li>The Gift Card Rewards instruments cannot be a repeating event for project $gcr_pid event id $gcr_event_id </li>";
-            } else {
-                $gcr_repeat_forms = array_keys($repeat_forms);
-                $intersection = array_intersect($all_event_forms, $gcr_repeat_forms);
-                if (!empty($intersection)) {
-                    $message = (empty($message) ? $title : $message) . "<li>The Gift Card Rewards instrument(s) " . implode(',', $intersection) . " cannot be a repeating form for project $gcr_pid event id $gcr_event_id</li>";
-                }
-            }
-        }
-
-        // Make sure the reserve and viewed timestamp are in 'datetime_seconds_ymd' format so we can successfully save
-        $missing_timestamp_fields = array_intersect($fields_not_found, array('reserved_ts', 'claimed_ts'));
-        if (empty($missing_timestamp_fields)) {
-            if (($gcr_proj->metadata['reserved_ts']['element_validation_type'] != 'datetime_seconds_ymd') ||
-                ($gcr_proj->metadata['claimed_ts']['element_validation_type'] != 'datetime_seconds_ymd')) {
-                $message = (empty($message) ? $title : $message) . "<li>The timestamps in the Gift Card Library must be formatted as 'Y-M-D H:M:S'.</li>";
-            }
-        }
-
-        if (empty($message)) {
-            return array(true, null);
-        } else {
-            return array(false, array($message));
-        }
-    }
-
-    /**
-     * This function will determine how many gift cards are available for the configuration that
-     * is specified.  It is currently not being used but can put on a cron to update projects
-     * when their card count is low.
-     *
-     * @param $configNum
-     * @return int|null
-     */
-    function numAvailableRewards($configNum) {
-
-        // Get GiftCard Repo Info
-        $gcr_pid = $this->getProjectSetting('gcr-pid');
-        $gcr_event_id = $this->getProjectSetting('gcr-event-id');
-
-        // Verify Reward Instance Configurations
-        $instances = $this->getSubSettings('rewards');
-        $instance = $instances[$configNum];
-        if (!empty($instance)) {
-            $ri = new RewardInstance($this, $gcr_pid, $gcr_event_id, $instance);
-            $numRewards =  $ri->numberAvailableRewards($this->gcr_required_fields);
-            $this->emLog("This is the number of available rewards for config $configNum: " . $numRewards);
-            return $numRewards;
-        } else {
-            $this->emLog("Invalid configuration number $configNum");
-            return null;
+            $this->emDebug("Back from API call for project $proj_id: " . $result);
         }
     }
 

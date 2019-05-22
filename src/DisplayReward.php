@@ -7,6 +7,7 @@ use REDCap;
 
 $gcToken = isset($_GET['token']) && !empty($_GET['token']) ? $_GET['token'] : null;
 $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
+$claimed = "Claimed";
 
 /*
  * This page is called from a link sent to the gift card recipients in email. The status in the gift card library
@@ -161,7 +162,7 @@ function findGiftCardData($pid, $gcToken) {
  * @return bool - true if successful, otherwise false
  */
 function sendEmailAndUpdateProjects($pid, $gcToken) {
-    global $module, $setupComplete, $gcConfig, $gclEventId, $gclPid, $gclRecordId, $projRecordId;
+    global $module, $setupComplete, $gcConfig, $gclEventId, $gclPid, $gclRecordId, $projRecordId, $claimed;
 
     $status = true;
     if ($setupComplete === false) {
@@ -180,22 +181,22 @@ function sendEmailAndUpdateProjects($pid, $gcToken) {
         $saveReward[$gclRecordId][$gclEventId] = $saveData;
         $returnStatus = REDCap::saveData($gclPid, 'array', $saveReward);
         if (empty($returnStatus['ids']) || !empty($returnStatus['errors'])) {
-            $module->emError("Problem saving Gift Card project status for record $gclRecordId in project $gclPid and status Viewed");
+            $module->emError("Problem saving Gift Card project status for record $gclRecordId in project $gclPid and status $claimed");
             $status = false;
         } else {
-            $module->emDebug("Successfully updated gift card project pid $gclPid record $gclRecordId with status Viewed");
+            $module->emDebug("Successfully updated gift card project pid $gclPid record $gclRecordId with status $claimed");
         }
 
         // Update the project record to tell them they have viewed their reward
         $projEventId = $gcConfig['reward-fk-event-id'];
         $projStatusField = $gcConfig['reward-status'];
-        $projData[$projRecordId][$projEventId][$projStatusField] = 'Viewed';
+        $projData[$projRecordId][$projEventId][$projStatusField] = $claimed;
         $returnStatus = REDCap::saveData($pid, 'array', $projData);
         if (empty($returnStatus['ids']) || !empty($returnStatus['errors'])) {
-            $module->emError("Problem saving Gift Card project status for record $projRecordId in project $pid and status Viewed");
+            $module->emError("Problem saving Gift Card project status for record $projRecordId in project $pid and status $claimed");
             $status = false;
         } else {
-            $module->emDebug("Successfully update gift card project pid $pid record $projRecordId with status Viewed");
+            $module->emDebug("Successfully update gift card project pid $pid record $projRecordId with status $claimed");
         }
     }
 

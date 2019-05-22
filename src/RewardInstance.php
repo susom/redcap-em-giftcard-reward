@@ -353,7 +353,7 @@ class RewardInstance
         // is checked that allows an email to receive multiple rewards.
         if (!$this->allow_multiple_rewards && !empty($this->email_address)) {
             $projFilter = "[" . $this->email . "] = '" . $this->email_address .
-                "' and (([". $this->gc_status . "] = 'Reserved') or ([" . $this->gc_status . "] = 'Viewed'))";
+                "' and (([". $this->gc_status . "] = 'Reserved') or ([" . $this->gc_status . "] = 'Claimed'))";
             $projData = REDCap::getData($this->project_id, 'array', null, array($this->email_address), $this->fk_event_id,
                 null, null, null, null, $projFilter);
             if (!empty($projData)) {

@@ -26,13 +26,6 @@ GiftCardRewardConfig = {
 
         // Let's call getStatus once to start us off:
         this.getStatus();
-
-        // $('tr.sub_start td:not([class]), tr.sub_start td[class=""]').each(function(i,j) {
-        //     nextTd = $(j).next('td');
-        //     $(j).remove();
-        //     nextTd.attr('colspan','2');
-        // });
-
     },
 
 
@@ -52,19 +45,6 @@ GiftCardRewardConfig = {
             .parent()
             .prependTo('.modal-body tbody');
     },
-
-
-    createStatusDiv: function(id) {
-        this.statusDiv = $('<div></div>')
-            .attr('id', id);
-        this.statusDiv
-            .wrap( $('<td>', { id: 'config-th', colspan: '3' }) )
-            .parent()
-            .wrap('<tr>')
-            .parent()
-            .prependTo('.modal-body tbody');
-    },
-
 
     getStatus: function () {
         // Assemble data from modal form

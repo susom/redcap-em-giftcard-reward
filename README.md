@@ -32,5 +32,4 @@ Each time a record is saved in the Gift Card Project, a check will be performed 
     
 # Future Enhancements
     - Add the ability for the projects to download a standard Gift Card Library Template
-    - Add the ability for a background process to monitor how many gift cards are available and alert the project owner when the number gets low
     - Add the ability to rate limit the number of cards that can be awarded per day

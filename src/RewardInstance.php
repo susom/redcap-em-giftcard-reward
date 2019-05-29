@@ -300,7 +300,7 @@ class RewardInstance
         // Check to see if there was threshold limit entered and if so, are we below it. If there are no rewards available,
         // we will be sending them email about this participant so don't send another email here.
         if (!$this->optout_low_balance and !empty($this->low_balance_number) and
-                (count($data) < $this->low_balance_number) and (count($data) > 0)) {
+                (count($data) <= $this->low_balance_number) and (count($data) > 0)) {
             $emailBody = "There are " . (count($data)-1) . " rewards available for gift card configuation " . $this->title;
             $status = $this->sendEmail($this->alert_email, $this->alert_email, "Gift Card Low Balance Notification", $emailBody);
         }

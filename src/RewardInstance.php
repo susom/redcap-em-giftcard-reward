@@ -206,6 +206,7 @@ class RewardInstance
         // Test the logic for this record
         if (($record !== null) && ($status !== false)) {
             $status = REDCap::evaluateLogic($this->logic, $this->project_id, $record);
+            $this->module->emDebug("Logic evaluated to '$status' for record $record for project $this->project_id - Logic: " . $this->logic);
         }
 
         return $status;

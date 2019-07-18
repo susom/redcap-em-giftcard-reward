@@ -399,9 +399,11 @@ class RewardInstance
         // Create the URL for this reward. Add on the project and hash
         $url = $this->module->getUrl("src/DisplayReward.php", true, true);
         $url .= "&token=" . $hash;
+        $this->module->emDebug("This is the hash: $hash for record $record_id and URL: " . $url);
 
         // Send the verification email to the recipient
         $status = $this->sendEmailWithLinkToReward($url, $record_id);
+        $this->module->emDebug("This is the status '$status' from sendingEmail for record $record_id");
         if ($status) {
 
             // If the email was successfully sent, update the Gift Card Library to reserve this reward
@@ -441,6 +443,7 @@ class RewardInstance
             $message = "<li>Reward email was NOT sent for record $record_id even though Gift Card Reward was found in record $gcr_record_id</li>";
         }
 
+        $this->module->emDebug("Message: " . $message . " for record_id " . $record_id);
         if ($message === '') {
             return array(true, null);
         } else {
@@ -473,6 +476,7 @@ class RewardInstance
 
         $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody);
         $this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody");
+        $this->module->emDebug("Send email status: $status");
 
         return $status;
     }

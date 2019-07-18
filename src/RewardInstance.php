@@ -91,8 +91,10 @@ class RewardInstance
      */
     public function verifyConfig() {
 
+        $this->module->emDebug("In verifyConfig");
         $message = '';
         $metaData = $this->module->getMetadata($this->project_id);
+        $this->module->emDebug("MetaData: " . json_encode($metaData));
 
         // First check that required fields are filled in
         $message = $this->checkForEmptyField($this->title, "Project Title", $message);
@@ -120,8 +122,10 @@ class RewardInstance
         }
 
         // Now check the logic which will determine when to send a gift card -- make sure it is valid
+        $this->module->emDebug("Check the logic to make sure it is valid: " . $this->logic);
         if (!empty($this->logic)) {
             $valid = $this->checkRewardStatus();
+            $this->module->emDebug("Return from checking Reward Status: " . $valid);
             if ($valid === null) {
                 $message .= "<li>Reward logic (" . $this->logic . ") cannot be confirmed to be valid because there are no records to check against.</li>";
             } else if ($valid === false) {

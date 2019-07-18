@@ -79,12 +79,16 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $alert_email = $this->getProjectSetting("alert-email");
         $configs = $this->getSubSettings("rewards");
         $this->emDebug("In save record for project $project_id and record $record");
+        $this->emDebug("Library id $gc_pid and Lib event id $gc_event_id and email $alert_email");
+        $this->emDebug("Configs: " . json_encode($configs));
 
         foreach ($configs as $config => $config_info) {
 
-            $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record");
+            $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record" . ", " . json_encode($config_info));
 
             $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $alert_email, $config_info);
+            $this->emDebug("Reward: " . $reward);
+
             $status = $reward->verifyConfig();
             $this->emDebug("Status of verifying config '" . $status . "' for record $record");
             if ($status) {

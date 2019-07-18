@@ -78,17 +78,24 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $gc_event_id = $this->getProjectSetting("gcr-event-id");
         $alert_email = $this->getProjectSetting("alert-email");
         $configs = $this->getSubSettings("rewards");
+        $this->emDebug("In save record for project $project_id and record $record");
 
         foreach ($configs as $config => $config_info) {
+
+            $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record");
+
             $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $alert_email, $config_info);
             $status = $reward->verifyConfig();
+            $this->emDebug("Status of verifying config '" . $status . "' for record $record");
             if ($status) {
                 $eligible = $reward->checkRewardStatus($record);
+                $this->emDebug("Record $record status is '". $eligible . "' for reward " . $config_info["reward-title"]);
 
                 if ($eligible) {
                     $message = "[PID:". $project_id . "] - record $record is eligible for " . $config_info["reward-title"] . " reward.";
                     $this->emDebug($message);
                     list($rewardSent, $message) = $reward->processReward($record);
+                    $this->emDebug("Reward sent status is '" . $rewardSent . "' for record $record");
 
                     if ($rewardSent) {
                         $message = "Finished processing reward for [$project_id] record $record for " . $config_info["reward-title"] . " reward.";

@@ -94,7 +94,7 @@
         },
         {
           "key": "reward-fk-event-id",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Field Event</span></h6>Specify the event where the the following fields resides",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Field Event</span></h6>Specify the event where the the following fields resides. Cannot be repeating event.",
           "required": true,
           "type": "event-list"
         },
@@ -118,13 +118,13 @@
         },
         {
           "key": "reward-amount",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Amount</span></h6>Specify the dollar amount for this gift card.<br>Only cards with a matching dollar amount from the GCR will be used.<br>If left blank, the next card from the GCR will be taken regardless of dollar value.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Amount</span></h6>Specify the dollar amount (number only) for this gift card (ex. 20 for twenty dollars).<br>Only cards with a matching dollar amount from the GCR will be used.<br>If left blank, the next card from the GCR will be taken regardless of dollar value.",
           "required": false,
           "type": "text"
         },
         {
           "key": "reward-email",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Address</span></h6>Enter the email address field from this project where the reward will be sent",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Address</span></h6>Enter the email address field from this project where the reward will be sent. This field does not need to be in the same event as the other gift card fields but it cannot be on a repeating form or in a repeating event or in multiple events.",
           "required": true,
           "type": "field-list"
         },

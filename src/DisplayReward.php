@@ -5,7 +5,7 @@ namespace Stanford\GiftcardReward;
 use Piping;
 use REDCap;
 
-$gcToken = isset($_GET['token']) && !empty($_GET['token']) ? $_GET['token'] : null;
+$gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? $_GET['reward_token'] : null;
 $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
 $claimed = "Claimed";
 

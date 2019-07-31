@@ -14,7 +14,7 @@ class RewardInstance
     private $title, $logic, $fk_field, $fk_event_id, $gc_status, $amount,
         $email, $email_subject, $email_header, $email_verification,
         $email_verification_subject, $email_verification_header,
-        $email_from, $email_address;
+        $email_from, $email_address, $email_event_id;
 
     private $optout_low_balance, $low_balance_number, $optout_daily_summary, $allow_multiple_rewards;
 
@@ -91,10 +91,8 @@ class RewardInstance
      */
     public function verifyConfig() {
 
-        $this->module->emDebug("In verifyConfig");
         $message = '';
         $metaData = $this->module->getMetadata($this->project_id);
-        $this->module->emDebug("MetaData: " . json_encode($metaData));
 
         // First check that required fields are filled in
         $message = $this->checkForEmptyField($this->title, "Project Title", $message);
@@ -111,25 +109,62 @@ class RewardInstance
             $message = "<li>" . $message . "</li>";
         }
 
-        // Check that the forms that the required fields are on are in this event
+        // Check that the forms that the required fields are on are in this event.
+        // We are not including the email address field since we are now allowing that to be in a different event
         $all_forms = array();
         $all_forms[0] = $metaData[$this->fk_field]['form_name'];
         $all_forms[1] = $metaData[$this->gc_status]['form_name'];
-        $all_forms[2] = $metaData[$this->email]['form_name'];
+        //$all_forms[2] = $metaData[$this->email]['form_name'];
         $diff = array_diff($all_forms, $this->Proj->eventsForms[$this->fk_event_id]);
         if (!empty($diff)) {
-            $message .= "<li>The project fields are not all in event " . $this->fk_event_id . "</li>";
+            if (count($diff) == 1) {
+                $message .= "<li>The project fields are not all in the same event " . $this->Proj->eventInfo[$this->fk_event_id]['name'] .
+                    ". The form " . json_encode(array_values($diff)) . " is not in this event.</li>";
+            } else {
+                $message .= "<li>The project fields are not all in the same event " . $this->Proj->eventInfo[$this->fk_event_id]['name'] .
+                    ". The forms " . json_encode(array_values($diff)) . " are not in this event.</li>";
+            }
         }
 
+        // The email address does not need to be in the same event as the gift card fields so look for it.
+        $this->email_event_id = null;
+        $email_form = $metaData[$this->email]['form_name'];
+        foreach ($this->Proj->eventsForms as $event_id => $form_list) {
+            if (in_array($email_form, $form_list)) {
+                if (is_null($this->email_event_id)) {
+                    $this->email_event_id = $event_id;
+                } else {
+                    $message .= "<li>The email address is in more than 1 event: $this->email_event_id and $event_id.</li>";
+                }
+            }
+        }
+        $this->module->emDebug("email event id is $this->email_event_id");
+
+        // There can only be one email field for each project so it cannot be located on a repeating form or in
+        // a repeating event
+        if (!empty($this->Proj->RepeatingFormsEvents[$this->email_event_id])) {
+            if ($this->Proj->RepeatingFormsEvents[$this->email_event_id] == 'WHOLE' or
+                !is_null($this->Proj->RepeatingFormsEvents[$this->email_event_id][$email_form])) {
+                $message .= "<li>Email address cannot be on a form that is repeating or in a repeating event.</li>";
+                $this->module->emDebug("Email address cannot be on a form that is repeating or in a repeating event.");
+            }
+        }
+
+
         // Now check the logic which will determine when to send a gift card -- make sure it is valid
-        $this->module->emDebug("Check the logic to make sure it is valid: " . $this->logic);
         if (!empty($this->logic)) {
-            $valid = $this->checkRewardStatus();
-            $this->module->emDebug("Return from checking Reward Status: " . $valid);
-            if ($valid === null) {
+
+            // To check the logic, we need a record.  See if there is a record in the project
+            $data = REDCap::getData($this->project_id, 'array', null, array($this->Proj->table_pk), $this->fk_event_id);
+            $record = array_keys($data)[0];
+            if (empty($record)) {
+                $this->module->emError("There are no records to test the gift card logic '" . $this->logic . "' for pid $this->project_id");
                 $message .= "<li>Reward logic (" . $this->logic . ") cannot be confirmed to be valid because there are no records to check against.</li>";
-            } else if ($valid === false) {
-                $message .= "<li>Reward logic is invalid (" . $this->logic . ")</li>";
+            } else {
+                $valid = $this->checkRewardStatus($record);
+                if ($valid === null) {
+                    $message .= "<li>Reward logic (" . $this->logic . ") is invalid.</li>";
+                }
             }
         } else {
             $message .= "<li>Logic to determine gift card eligibility is empty.</li>";
@@ -166,10 +201,8 @@ class RewardInstance
     }
 
     /**
-     * This function checks the logic which determines when it is time to send a reward.  When the
-     * configuration is being setup, we don't have a record number to test the logic against so find
-     * a record in the project.  If the project does not have any records yet, we can verify the logic
-     * is correct.
+     * This function checks the logic which determines when it is time to send a reward.  If a record is not
+     * given, we can't check the logic so return invalid.
      *
      * When a record is saved, we check the status of the logic to see if it is time to send the reward.
      * If a reward was already sent (by checking the reward status and gift card id fields) don't
@@ -187,19 +220,20 @@ class RewardInstance
         // If a record was not given, find a record to test the logic on
         // This path is used to test out the logic to make sure it is configured correctly
         if (empty($record)) {
-            $data = REDCap::getData($this->project_id, 'array', null, array($this->Proj->table_pk), $this->fk_event_id);
-            $record = array_keys($data)[0];
-            if (empty($record)) {
-                $this->module->emError("There are no records to test the gift card logic '" . $this->logic . "' for pid $this->project_id");
-            } else {
-                $this->module->emDebug("Found record $record to test logic " . $this->logic);
-            }
+            $this->module->emError("Entered record id is null so gift card logic '" . $this->logic . "' for pid $this->project_id cannot be performed.");
+            return $status;
         } else {
 
-            // If a record was given, make sure a reward was not already given
-            $data = REDCap::getData($this->project_id, 'array', $record, null, $this->fk_event_id);
+            // If a record was given, make sure a reward was not already given.  We need the whole record
+            // because the email address might be in a different event.
+            $data = REDCap::getData($this->project_id, 'array', $record, null, array($this->email_event_id, $this->fk_event_id));
             $thisRecord = $data[$record][$this->fk_event_id];
-            $this->email_address = $thisRecord[$this->email];
+            if (is_null($this->email_event_id)) {
+                $this->module->emError("This email event ID is null so cannot find the email address.");
+                $status = false;
+            } else {
+                $this->email_address = $data[$record][$this->email_event_id][$this->email];
+            }
 
             // If the fk_field field is not blank, a gc has already been issued
             if (!empty($thisRecord[$this->fk_field])) {
@@ -356,10 +390,22 @@ class RewardInstance
 
         // Check to see if this email address already received a gift card or if the checkbox
         // is checked that allows an email to receive multiple rewards.
+        if (REDCap::isLongitudinal()) {
+            $event_names = REDCap::getEventNames(true, false);
+            $this->module->emDebug("(true, false)Event names for record $record_id: " . json_encode($event_names));
+
+            $projFilter = "[" . $event_names[$this->email_event_id] . "][" . $this->email . "] = '" . $this->email_address . "'" .
+                " and (([" . $event_names[$this->fk_event_id] . "][". $this->gc_status . "] = 'Reserved')" .
+                " or ([" . $event_names[$this->fk_event_id] . "][" . $this->gc_status . "] = 'Claimed'))";
+            $this->module->emDebug("Project Filter: " . $projFilter);
+        } else {
+            $projFilter = "[" . $this->email . "] = '" . $this->email_address . "'" .
+                " and (([". $this->gc_status . "] = 'Reserved')" .
+                " or ([" . $this->gc_status . "] = 'Claimed'))";
+        }
+
         if (!$this->allow_multiple_rewards && !empty($this->email_address)) {
-            $projFilter = "[" . $this->email . "] = '" . $this->email_address .
-                "' and (([". $this->gc_status . "] = 'Reserved') or ([" . $this->gc_status . "] = 'Claimed'))";
-            $projData = REDCap::getData($this->project_id, 'array', null, array($this->email_address), $this->fk_event_id,
+            $projData = REDCap::getData($this->project_id, 'array', null, array($this->email_address), null,
                 null, null, null, null, $projFilter);
             if (!empty($projData)) {
                 $message = "Duplicate email addresss $this->email_address for reward $this->title and record $record_id";
@@ -402,7 +448,7 @@ class RewardInstance
 
         // Create the URL for this reward. Add on the project and hash
         $url = $this->module->getUrl("src/DisplayReward.php", true, true);
-        $url .= "&token=" . $hash;
+        $url .= "&reward_token=" . $hash;
         $this->module->emDebug("This is the hash: $hash for record $record_id and URL: " . $url);
 
         // Send the verification email to the recipient
@@ -447,7 +493,6 @@ class RewardInstance
             $message = "<li>Reward email was NOT sent for record $record_id even though Gift Card Reward was found in record $gcr_record_id</li>";
         }
 
-        $this->module->emDebug("Message: " . $message . " for record_id " . $record_id);
         if ($message === '') {
             return array(true, null);
         } else {
@@ -480,7 +525,6 @@ class RewardInstance
 
         $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody);
         $this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody");
-        $this->module->emDebug("Send email status: $status");
 
         return $status;
     }

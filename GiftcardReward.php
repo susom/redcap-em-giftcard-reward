@@ -78,28 +78,20 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $gc_event_id = $this->getProjectSetting("gcr-event-id");
         $alert_email = $this->getProjectSetting("alert-email");
         $configs = $this->getSubSettings("rewards");
-        $this->emDebug("In save record for project $project_id and record $record");
-        $this->emDebug("Library id $gc_pid and Lib event id $gc_event_id and email $alert_email");
-        $this->emDebug("Configs: " . json_encode($configs));
+        $this->emDebug("Configs for project $project_id: " . json_encode($configs));
 
         foreach ($configs as $config => $config_info) {
 
             $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record" . ", " . json_encode($config_info));
 
             $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $alert_email, $config_info);
-            $this->emDebug("Reward: " . $reward);
-
             $status = $reward->verifyConfig();
-            $this->emDebug("Status of verifying config '" . $status . "' for record $record");
             if ($status) {
                 $eligible = $reward->checkRewardStatus($record);
-                $this->emDebug("Record $record status is '". $eligible . "' for reward " . $config_info["reward-title"]);
-
                 if ($eligible) {
                     $message = "[PID:". $project_id . "] - record $record is eligible for " . $config_info["reward-title"] . " reward.";
                     $this->emDebug($message);
                     list($rewardSent, $message) = $reward->processReward($record);
-                    $this->emDebug("Reward sent status is '" . $rewardSent . "' for record $record");
 
                     if ($rewardSent) {
                         $message = "Finished processing reward for [$project_id] record $record for " . $config_info["reward-title"] . " reward.";

@@ -228,7 +228,9 @@ function getGiftCardSummary() {
     // Create the message that will be shown to recipients
     $message = "$" . $amount . " " . $brand . " gift card for your " . $rewardName. " reward.<br><br>";
     $message .= "Your gift card number is <b>" . $reward . "</b><br>";
-    $message .= "The challenge code is <b>" . $code . "</b><br>";
+    if (!empty($code)) {
+        $message .= "The challenge code is <b>" . $code . "</b><br>";
+    }
     $module->emDebug($message);
 
     return $message;

@@ -131,14 +131,17 @@ function findGiftCardData($pid, $gcToken) {
             // Retrieve configuration for this reward name so we can get the email parameters
             $rewardName = $gclRecord[$gclRecordId][$gclEventId]['reward_name'];
             $projRecordId = $gclRecord[$gclRecordId][$gclEventId]['reward_record'];
+            $module->emDebug("This is the reward name: " .$rewardName . ", and project record id: " .$projRecordId);
             $gcConfig = getGiftCardConfig($rewardName);
+            $module->emDebug("This is the config which holds this token: " . json_encode($gcConfig));
             if (empty($gcConfig)) {
-                $module->emError("Cannot find Gift Card Configuration titled " . $gclRecord['reward_name']);
+                $module->emError("Cannot find Gift Card Configuration titled " . json_encode($gclRecord['reward_name']));
                 $setupComplete = false;
             } else {
 
                 // Now that we have the configuration, we can find the GC Project record to get the email address
-                $projRecord = getProjectRecord($pid);
+                $projRecord = getProjectRecord($pid, $projRecordId);
+                $module->emDebug("This is the project Record: " . json_encode($projRecord));
                 if (empty($projRecord)) {
                     $module->emError("Cannot retrieve gift card project record " . $gclRecord['reward_record']);
                     $setupComplete = false;
@@ -172,8 +175,16 @@ function sendEmailAndUpdateProjects($pid, $gcToken) {
         }
     }
 
-    // Send them email with the above information
-    $status = sendRewardEmail();
+    // Retrieve gift card email address since it may or may not be in the same event as the gift card fields in the project
+    $data = REDCap::getData($pid, 'array', $projRecordId, array($gcConfig['reward-email']));
+    $module->emDebug("To find email address: " . json_encode($data));
+    $email_address_eventID = array_keys($data[$projRecordId])[0];
+    $module->emDebug("Email event: " . $email_address_eventID);
+    $email_address = $data[$projRecordId][$email_address_eventID]['reward_email'];
+    $module->emDebug("This is the email address: " . $email_address);
+
+    // Send the email with the above information
+    $status = sendRewardEmail($email_address);
     if ($status) {
         // Save the fact that we have shown them their reward in the gift card libary
         $saveData['status'] = 3;  // GC Claimed
@@ -249,8 +260,10 @@ function findGiftCardLibraryRecord($pid, $gcrPid, $gcToken) {
     global $module, $gclRecordId, $gclEventId;
 
     // Find the gift card library record with the token (hash)
-    $filter = "[reward_hash]='" . $gcToken . "' and [reward_pid]='" . $pid . "'";
+    $filter = "[reward_hash]='" . $gcToken . "' and [reward_pid]='" . $pid . "'";$module->emDebug("Filter for Library: " . $filter);
+    $module->emDebug("Filter for gc library: " . $filter);
     $gclData = REDCap::getData($gcrPid, 'array', null, null, $gclEventId, null, null, null, null, $filter);
+    $module->emDebug("Reward library data: " . json_encode($gclData));
     if (empty($gclData)) {
         $module->emError("Could not find record with token $gcToken in project $gcrPid");
     } else {
@@ -294,15 +307,15 @@ function getGiftCardConfig($rewardName) {
  * @param $pid
  * @return array - gift card project record
  */
-function getProjectRecord($pid) {
+function getProjectRecord($pid, $record_id) {
 
-    global $gcConfig;
+    global $module, $gcConfig;
 
     $eventId = $gcConfig['reward-fk-event-id'];
-    $field = $gcConfig['reward_record'];
 
     // Retrieve the record so we know who to send this info to
-    $record = REDCap::getData($pid, 'array', $field, null, array($eventId));
+    $record = REDCap::getData($pid, 'array', array($record_id), null, array($eventId));
+    $module->emDebug("Project record: " . json_encode($record));
 
     return $record;
 }
@@ -312,7 +325,7 @@ function getProjectRecord($pid) {
  *
  * @return bool - true - email was successfully sent, otherwise false
  */
-function sendRewardEmail() {
+function sendRewardEmail($toEmail) {
 
     global $module, $projRecord, $message, $gcConfig, $projRecordId;
 
@@ -325,7 +338,6 @@ function sendRewardEmail() {
     }
 
     // Find the fields that holds the email setup
-    $rewardEmailField = $gcConfig['reward-email'];
     $fromEmail = $gcConfig["reward-email-from"];
     $subjectBefore = $gcConfig["reward-email-subject"];
     $headerBefore = $gcConfig["reward-email-header"];
@@ -339,8 +351,6 @@ function sendRewardEmail() {
         $body = $header . "<br>" . $message;
     }
 
-    // Find the actual email address from the record
-    $toEmail = $rewardRecord[$rewardEmailField];
 
     $status = REDCap::email($toEmail, $fromEmail, $subject, $body);
     $module->emDebug("Rewards email: To $toEmail, From: $fromEmail, Subject: $subject, Body: $body");

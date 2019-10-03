@@ -191,7 +191,7 @@ function sendEmailAndUpdateProjects($pid, $gcToken) {
 
     // Now that we have the correct event, retrieve the email address
     $data = REDCap::getData($pid, 'array', $projRecordId, array($gcConfig['reward-email']));
-    $email_address = $data[$projRecordId][$email_eventID]['reward_email'];
+    $email_address = $data[$projRecordId][$email_eventID][$gcConfig['reward-email']];
     $module->emDebug("This is the email address: " . $email_address);
 
     // Send the email with the above information

@@ -4,6 +4,7 @@ namespace Stanford\GiftcardReward;
 
 use Piping;
 use REDCap;
+use Project;
 
 $gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? $_GET['reward_token'] : null;
 $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
@@ -18,7 +19,6 @@ $claimed = "Claimed";
  * information.
  */
 
-$module->emDebug("Processing request for token $gcToken for project $pid");
 
 $gcConfig = array();
 $gclRecord = array();
@@ -165,7 +165,7 @@ function findGiftCardData($pid, $gcToken) {
  * @return bool - true if successful, otherwise false
  */
 function sendEmailAndUpdateProjects($pid, $gcToken) {
-    global $module, $setupComplete, $gcConfig, $gclEventId, $gclPid, $gclRecordId, $projRecordId, $claimed;
+    global $module, $setupComplete, $gcConfig, $gclEventId, $gclPid, $gclRecordId, $projRecordId, $claimed, $Proj;
 
     $status = true;
     if ($setupComplete === false) {
@@ -175,12 +175,23 @@ function sendEmailAndUpdateProjects($pid, $gcToken) {
         }
     }
 
-    // Retrieve gift card email address since it may or may not be in the same event as the gift card fields in the project
+    // Retrieve gift card email event ID since it may or may not be in the same event as the gift card fields in the project
+    $metadata = $Proj->metadata;
+    $email_form = $metadata[$gcConfig['reward-email']]['form_name'];
+    $email_eventID = null;
+    foreach($Proj->eventsForms as $eventId => $eventForms) {
+        if (in_array($email_form, $eventForms)) {
+            $email_eventID = $eventId;
+        }
+    }
+    if (empty($email_eventID)) {
+        $module->emError("Cannot find the event ID where the Email address resides: " . $gcConfig['reward-email']);
+        return false;
+    }
+
+    // Now that we have the correct event, retrieve the email address
     $data = REDCap::getData($pid, 'array', $projRecordId, array($gcConfig['reward-email']));
-    $module->emDebug("To find email address: " . json_encode($data));
-    $email_address_eventID = array_keys($data[$projRecordId])[0];
-    $module->emDebug("Email event: " . $email_address_eventID);
-    $email_address = $data[$projRecordId][$email_address_eventID]['reward_email'];
+    $email_address = $data[$projRecordId][$email_eventID]['reward_email'];
     $module->emDebug("This is the email address: " . $email_address);
 
     // Send the email with the above information

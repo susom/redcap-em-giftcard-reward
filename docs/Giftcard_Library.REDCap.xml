@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:redcap="https://projectredcap.org" xsi:schemaLocation="http://www.cdisc.org/ns/odm/v1.3 schema/odm/ODM1-3-1.xsd" ODMVersion="1.3.1" FileOID="000-00-0000" FileType="Snapshot" Description="Gift Card Library" AsOfDateTime="2019-05-22T13:51:02" CreationDateTime="2019-05-22T13:51:02" SourceSystem="REDCap" SourceSystemVersion="9.0.2">
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:redcap="https://projectredcap.org" xsi:schemaLocation="http://www.cdisc.org/ns/odm/v1.3 schema/odm/ODM1-3-1.xsd" ODMVersion="1.3.1" FileOID="000-00-0000" FileType="Snapshot" Description="Gift Card Library" AsOfDateTime="2019-10-30T14:45:09" CreationDateTime="2019-10-30T14:45:09" SourceSystem="REDCap" SourceSystemVersion="9.3.1">
 <Study OID="Project.GiftCardLibrary">
 <GlobalVariables>
 	<StudyName>Gift Card Library</StudyName>
@@ -15,16 +15,16 @@
 	<redcap:PurposeOther></redcap:PurposeOther>
 	<redcap:ProjectNotes></redcap:ProjectNotes>
 	<redcap:ReportsGroup>
-		<redcap:Reports title="All Rewards" report_order="1" user_access="ALL" user_edit_access="ALL" description="" combine_checkbox_values="0" output_dags="0" output_survey_fields="0" orderby_field1="reward_id" orderby_sort1="ASC" orderby_field2="" orderby_sort2="" orderby_field3="" orderby_sort3="" advanced_logic="" filter_type="EVENT" dynamic_filter1="" dynamic_filter2="" dynamic_filter3="" fields="" limiter_fields="" limiter_dags="" limiter_events="" limiter_logic="" user_access_users="" user_access_roles="" user_access_dags="" user_edit_access_users="" user_edit_access_roles="" user_edit_access_dags="" redcap_reports_fields="reward_id,brand,egift_number,challenge_code,amount,status,reward_name,reward_pid,reward_record,url,reserved_ts,claimed_ts,gift_cards_complete" redcap_reports_filter_dags="" redcap_reports_filter_events="" ID="4fa0fc7cdca1e07414b23b173675a23f193a702a"/>
+		<redcap:Reports title="All rewards" report_order="1" user_access="ALL" user_edit_access="ALL" description="" combine_checkbox_values="0" output_dags="0" output_survey_fields="0" orderby_field1="reward_id" orderby_sort1="ASC" orderby_field2="" orderby_sort2="" orderby_field3="" orderby_sort3="" advanced_logic="" filter_type="EVENT" dynamic_filter1="" dynamic_filter2="" dynamic_filter3="" fields="" limiter_fields="" limiter_dags="" limiter_events="" limiter_logic="" user_access_users="" user_access_roles="" user_access_dags="" user_edit_access_users="" user_edit_access_roles="" user_edit_access_dags="" redcap_reports_fields="reward_id,brand,egift_number,url,challenge_code,amount,status,reward_name,reward_hash,reward_pid,reward_record,reserved_ts,claimed_ts,gift_cards_complete" redcap_reports_filter_dags="" redcap_reports_filter_events="" ID="da4b9237bacccdf19c0760cab7aec4a8359010b0"/>
 	</redcap:ReportsGroup>
 </GlobalVariables>
-<MetaDataVersion OID="Metadata.GiftCardLibrary_2019-05-22_1351" Name="Gift Card Library" redcap:RecordIdField="reward_id">
+<MetaDataVersion OID="Metadata.GiftCardLibrary_2019-10-30_1445" Name="Gift Card Library" redcap:RecordIdField="reward_id">
 	<FormDef OID="Form.gift_cards" Name="Gift Cards" Repeating="No" redcap:FormName="gift_cards">
 		<ItemGroupRef ItemGroupOID="gift_cards.reward_id" Mandatory="No"/>
-		<ItemGroupRef ItemGroupOID="gift_cards.ready_instructions" Mandatory="No"/>
-		<ItemGroupRef ItemGroupOID="gift_cards.ready_for_use_instructions" Mandatory="No"/>
+		<ItemGroupRef ItemGroupOID="gift_cards.electronic_card_used" Mandatory="No"/>
+		<ItemGroupRef ItemGroupOID="gift_cards.electronic_card_used_2" Mandatory="No"/>
 		<ItemGroupRef ItemGroupOID="gift_cards.reward_pid" Mandatory="No"/>
-		<ItemGroupRef ItemGroupOID="gift_cards.reward_name" Mandatory="No"/>
+		<ItemGroupRef ItemGroupOID="gift_cards.reward_hash" Mandatory="No"/>
 		<ItemGroupRef ItemGroupOID="gift_cards.gift_cards_complete" Mandatory="No"/>
 	</FormDef>
 	<ItemGroupDef OID="gift_cards.reward_id" Name="Gift Cards" Repeating="No">
@@ -34,25 +34,25 @@
 		<ItemRef ItemOID="challenge_code" Mandatory="No" redcap:Variable="challenge_code"/>
 		<ItemRef ItemOID="amount" Mandatory="No" redcap:Variable="amount"/>
 	</ItemGroupDef>
-	<ItemGroupDef OID="gift_cards.ready_instructions" Name="Status" Repeating="No">
-		<ItemRef ItemOID="ready_instructions" Mandatory="No" redcap:Variable="ready_instructions"/>
-	</ItemGroupDef>
-	<ItemGroupDef OID="gift_cards.ready_for_use_instructions" Name="Gift Cards" Repeating="No">
-		<ItemRef ItemOID="ready_for_use_instructions" Mandatory="No" redcap:Variable="ready_for_use_instructions"/>
+	<ItemGroupDef OID="gift_cards.electronic_card_used" Name="Status" Repeating="No">
 		<ItemRef ItemOID="electronic_card_used" Mandatory="No" redcap:Variable="electronic_card_used"/>
+	</ItemGroupDef>
+	<ItemGroupDef OID="gift_cards.electronic_card_used_2" Name="Gift Cards" Repeating="No">
 		<ItemRef ItemOID="electronic_card_used_2" Mandatory="No" redcap:Variable="electronic_card_used_2"/>
 		<ItemRef ItemOID="status" Mandatory="No" redcap:Variable="status"/>
+		<ItemRef ItemOID="ready_instructions" Mandatory="No" redcap:Variable="ready_instructions"/>
 	</ItemGroupDef>
 	<ItemGroupDef OID="gift_cards.reward_pid" Name="Reward Information" Repeating="No">
 		<ItemRef ItemOID="reward_pid" Mandatory="No" redcap:Variable="reward_pid"/>
 	</ItemGroupDef>
-	<ItemGroupDef OID="gift_cards.reward_name" Name="Gift Cards" Repeating="No">
+	<ItemGroupDef OID="gift_cards.reward_hash" Name="Gift Cards" Repeating="No">
+		<ItemRef ItemOID="reward_hash" Mandatory="No" redcap:Variable="reward_hash"/>
 		<ItemRef ItemOID="reward_name" Mandatory="No" redcap:Variable="reward_name"/>
 		<ItemRef ItemOID="reward_record" Mandatory="No" redcap:Variable="reward_record"/>
-		<ItemRef ItemOID="reward_hash" Mandatory="No" redcap:Variable="reward_hash"/>
 		<ItemRef ItemOID="url" Mandatory="No" redcap:Variable="url"/>
 		<ItemRef ItemOID="reserved_ts" Mandatory="No" redcap:Variable="reserved_ts"/>
 		<ItemRef ItemOID="claimed_ts" Mandatory="No" redcap:Variable="claimed_ts"/>
+		<ItemRef ItemOID="reward_email_addr" Mandatory="No" redcap:Variable="reward_email_addr"/>
 	</ItemGroupDef>
 	<ItemGroupDef OID="gift_cards.gift_cards_complete" Name="Form Status" Repeating="No">
 		<ItemRef ItemOID="gift_cards_complete" Mandatory="No" redcap:Variable="gift_cards_complete"/>
@@ -69,47 +69,49 @@
 	<ItemDef OID="challenge_code" Name="challenge_code" DataType="text" Length="999" redcap:Variable="challenge_code" redcap:FieldType="text">
 		<Question><TranslatedText>Challenge Code</TranslatedText></Question>
 	</ItemDef>
-	<ItemDef OID="amount" Name="amount" DataType="text" Length="999" redcap:Variable="amount" redcap:FieldType="text">
+	<ItemDef OID="amount" Name="amount" DataType="float" Length="999" SignificantDigits="1" redcap:Variable="amount" redcap:FieldType="text" redcap:TextValidationType="float" redcap:FieldNote="Number only (no $)">
 		<Question><TranslatedText>Amount</TranslatedText></Question>
 	</ItemDef>
-	<ItemDef OID="ready_instructions" Name="ready_instructions" DataType="text" Length="999" redcap:Variable="ready_instructions" redcap:FieldType="descriptive" redcap:SectionHeader="Status" redcap:BranchingLogic="[status]=&#039;0&#039; or [status]=&#039;&#039;">
-		<Question><TranslatedText>Gift Card Not Ready for UseTo use this electronic gift card, the Status must be Marked as Ready
-</TranslatedText><redcap:FormattedTranslatedText>&lt;div class=&#039;red text-center&#039;&gt;&lt;h5&gt;Gift Card Not Ready for Use&lt;/h5&gt;To use this electronic gift card, the &lt;i&gt;&lt;b&gt;Status&lt;/b&gt;&lt;/i&gt; must be Marked as Ready
-&lt;/div&gt;</redcap:FormattedTranslatedText></Question>
+	<ItemDef OID="electronic_card_used" Name="electronic_card_used" DataType="text" Length="999" redcap:Variable="electronic_card_used" redcap:FieldType="descriptive" redcap:SectionHeader="Status" redcap:BranchingLogic="[status] = &#039;2&#039; and [reserved_ts] &lt;&gt; &#039;&#039;">
+		<Question><TranslatedText>Gift Card Delivered Electronically[used_record] was sent this reward on [used_ts] in project [used_pid]</TranslatedText><redcap:FormattedTranslatedText>&lt;div class=&#039;green text-center&#039;&gt;&lt;h5 class=&#039;text-center&#039;&gt;Gift Card Delivered Electronically&lt;/h5&gt;&lt;b&gt;[used_record]&lt;/b&gt; was sent this reward on [used_ts] in project [used_pid]&lt;/div&gt;</redcap:FormattedTranslatedText></Question>
 	</ItemDef>
-	<ItemDef OID="ready_for_use_instructions" Name="ready_for_use_instructions" DataType="text" Length="999" redcap:Variable="ready_for_use_instructions" redcap:FieldType="descriptive" redcap:BranchingLogic="[status]=&quot;1&quot;">
-		<Question><TranslatedText>Gift Card Ready for UseThis card is available to use.</TranslatedText><redcap:FormattedTranslatedText>&lt;div class=&#039;green text-center&#039;&gt;&lt;h5 class=&#039;text-center&#039;&gt;Gift Card Ready for Use&lt;/h5&gt;This card is available to use.&lt;/div&gt;</redcap:FormattedTranslatedText></Question>
-	</ItemDef>
-	<ItemDef OID="electronic_card_used" Name="electronic_card_used" DataType="text" Length="999" redcap:Variable="electronic_card_used" redcap:FieldType="descriptive" redcap:BranchingLogic="[status] = &#039;3&#039; and [claimed_ts] &lt;&gt; &#039;&#039;">
-		<Question><TranslatedText>Gift Card Delivered Electronically[reward_record] was sent this reward on [claimed_ts] in project [reward_pid]</TranslatedText><redcap:FormattedTranslatedText>&lt;div class=&#039;green text-center&#039;&gt;&lt;h5 class=&#039;text-center&#039;&gt;Gift Card Delivered Electronically&lt;/h5&gt;&lt;b&gt;[reward_record]&lt;/b&gt; was sent this reward on [claimed_ts] in project [reward_pid]&lt;/div&gt;</redcap:FormattedTranslatedText></Question>
-	</ItemDef>
-	<ItemDef OID="electronic_card_used_2" Name="electronic_card_used_2" DataType="text" Length="999" redcap:Variable="electronic_card_used_2" redcap:FieldType="descriptive" redcap:BranchingLogic="datediff([reserved_ts],&quot;today&quot;,&quot;d&quot;, &quot;YMD&quot;, true) &gt; 7  AND [status] = &quot;2&quot;">
-		<Question><TranslatedText>Gift Card Not ClaimedThis gift required email verification.  More than 7 days have passed since [reward_record] was sent an email to claim this reward.  You could reclaim this reward by clearing the Date Reserved field and setting the status back to Ready.</TranslatedText><redcap:FormattedTranslatedText>&lt;div class=&#039;red text-center&#039;&gt;&lt;h5 class=&#039;text-center&#039;&gt;Gift Card Not Claimed&lt;/h5&gt;This gift required email verification.  More than 7 days have passed since &lt;b&gt;[reward_record]&lt;/b&gt; was sent an email to claim this reward.  You could reclaim this reward by clearing the &lt;b&gt;Date Reserved&lt;/b&gt; field and setting the status back to &lt;b&gt;Ready&lt;/b&gt;.&lt;/div&gt;</redcap:FormattedTranslatedText></Question>
+	<ItemDef OID="electronic_card_used_2" Name="electronic_card_used_2" DataType="text" Length="999" redcap:Variable="electronic_card_used_2" redcap:FieldType="descriptive" redcap:BranchingLogic="datediff([reserved_ts],&quot;today&quot;,&quot;d&quot;, &quot;YMD&quot;, true) &gt; 7 and [claimed_ts] = &#039;&#039;">
+		<Question><TranslatedText>Gift Card Not ClaimedThis gift required email verification.  More than 7 days have passed since [used_record] was sent an email to claim this reward.  You could reclaim this reward by clearing the Date Used field.</TranslatedText><redcap:FormattedTranslatedText>&lt;div class=&#039;red text-center&#039;&gt;&lt;h5 class=&#039;text-center&#039;&gt;Gift Card Not Claimed&lt;/h5&gt;This gift required email verification.  More than 7 days have passed since &lt;b&gt;[used_record]&lt;/b&gt; was sent an email to claim this reward.  You could reclaim this reward by clearing the &lt;b&gt;Date Used&lt;/b&gt; field.&lt;/div&gt;</redcap:FormattedTranslatedText></Question>
 	</ItemDef>
 	<ItemDef OID="status" Name="status" DataType="text" Length="1" redcap:Variable="status" redcap:FieldType="radio">
 		<Question><TranslatedText>Status</TranslatedText></Question>
 		<CodeListRef CodeListOID="status.choices"/>
 	</ItemDef>
-	<ItemDef OID="reward_pid" Name="reward_pid" DataType="text" Length="999" redcap:Variable="reward_pid" redcap:FieldType="text" redcap:FieldNote="Project ID that claimed reward" redcap:SectionHeader="Reward Information" redcap:BranchingLogic="[status] &gt; &quot;1&quot;">
+	<ItemDef OID="ready_instructions" Name="ready_instructions" DataType="text" Length="999" redcap:Variable="ready_instructions" redcap:FieldType="descriptive" redcap:BranchingLogic="[status] = &#039;1&#039; AND ([reserved_ts] &lt;&gt; &#039;&#039;)">
+		<Question><TranslatedText>To use this electronic gift card it must be:
+- Marked as Ready
+- Have a blank &#039;Date Reserved&#039; field</TranslatedText><redcap:FormattedTranslatedText>&lt;div class=&#039;red&#039;&gt;&lt;b&gt;To use this electronic gift card it must be:&lt;/b&gt;
+- Marked as Ready
+- Have a blank &#039;Date Reserved&#039; field&lt;/div&gt;</redcap:FormattedTranslatedText></Question>
+	</ItemDef>
+	<ItemDef OID="reward_pid" Name="reward_pid" DataType="text" Length="999" redcap:Variable="reward_pid" redcap:FieldType="text" redcap:FieldNote="Project ID that claimed reward" redcap:SectionHeader="Reward Information" redcap:BranchingLogic="[status]&gt;&quot;1&quot;">
 		<Question><TranslatedText>Reward Project</TranslatedText></Question>
 	</ItemDef>
-	<ItemDef OID="reward_name" Name="reward_name" DataType="text" Length="999" redcap:Variable="reward_name" redcap:FieldType="text" redcap:FieldNote="Name of Reward" redcap:BranchingLogic="[status] &gt; &quot;1&quot;">
-		<Question><TranslatedText>Reward Name</TranslatedText></Question>
-	</ItemDef>
-	<ItemDef OID="reward_record" Name="reward_record" DataType="text" Length="999" redcap:Variable="reward_record" redcap:FieldType="text" redcap:FieldNote="Record ID that claimed reward" redcap:BranchingLogic="[status] &gt; &quot;1&quot;">
-		<Question><TranslatedText>Reward Record</TranslatedText></Question>
-	</ItemDef>
-	<ItemDef OID="reward_hash" Name="reward_hash" DataType="text" Length="999" redcap:Variable="reward_hash" redcap:FieldType="text" redcap:BranchingLogic="[status] &gt; &quot;1&quot;">
+	<ItemDef OID="reward_hash" Name="reward_hash" DataType="text" Length="999" redcap:Variable="reward_hash" redcap:FieldType="text" redcap:BranchingLogic="[status]&gt;&quot;1&quot;">
 		<Question><TranslatedText>Reward Hash</TranslatedText></Question>
 	</ItemDef>
-	<ItemDef OID="url" Name="url" DataType="text" Length="999" redcap:Variable="url" redcap:FieldType="text" redcap:BranchingLogic="[status] &gt; &quot;1&quot;">
-		<Question><TranslatedText>Reward Url sent to Participant</TranslatedText></Question>
+	<ItemDef OID="reward_name" Name="reward_name" DataType="text" Length="999" redcap:Variable="reward_name" redcap:FieldType="text" redcap:FieldNote="Name of Reward" redcap:BranchingLogic="[status]&gt;&quot;1&quot;">
+		<Question><TranslatedText>Reward Name</TranslatedText></Question>
 	</ItemDef>
-	<ItemDef OID="reserved_ts" Name="reserved_ts" DataType="datetime" Length="999" redcap:Variable="reserved_ts" redcap:FieldType="text" redcap:TextValidationType="datetime_seconds_ymd" redcap:FieldNote="Timestamp when the user became eligible for the reward" redcap:BranchingLogic="[status] &gt; &quot;1&quot;">
+	<ItemDef OID="reward_record" Name="reward_record" DataType="text" Length="999" redcap:Variable="reward_record" redcap:FieldType="text" redcap:FieldNote="Record ID that claimed reward" redcap:BranchingLogic="[status]&gt;&quot;1&quot;">
+		<Question><TranslatedText>Reward Record</TranslatedText></Question>
+	</ItemDef>
+	<ItemDef OID="url" Name="url" DataType="text" Length="999" redcap:Variable="url" redcap:FieldType="text" redcap:BranchingLogic="[status]&gt;&quot;1&quot;">
+		<Question><TranslatedText>URL</TranslatedText></Question>
+	</ItemDef>
+	<ItemDef OID="reserved_ts" Name="reserved_ts" DataType="datetime" Length="999" redcap:Variable="reserved_ts" redcap:FieldType="text" redcap:TextValidationType="datetime_seconds_ymd" redcap:BranchingLogic="[status]&gt;&quot;1&quot;">
 		<Question><TranslatedText>Date Reserved</TranslatedText></Question>
 	</ItemDef>
-	<ItemDef OID="claimed_ts" Name="claimed_ts" DataType="datetime" Length="999" redcap:Variable="claimed_ts" redcap:FieldType="text" redcap:TextValidationType="datetime_seconds_ymd" redcap:FieldNote="Timestamp when actually viewed/sent to user" redcap:BranchingLogic="[status] &gt; &quot;1&quot;">
+	<ItemDef OID="claimed_ts" Name="claimed_ts" DataType="datetime" Length="999" redcap:Variable="claimed_ts" redcap:FieldType="text" redcap:TextValidationType="datetime_seconds_ymd" redcap:FieldNote="Timestamp when actually viewed/sent to user" redcap:BranchingLogic="[status]&gt;&quot;1&quot;">
 		<Question><TranslatedText>Date Claimed</TranslatedText></Question>
+	</ItemDef>
+	<ItemDef OID="reward_email_addr" Name="reward_email_addr" DataType="text" Length="999" redcap:Variable="reward_email_addr" redcap:FieldType="text" redcap:TextValidationType="email">
+		<Question><TranslatedText>Reward Email Address</TranslatedText></Question>
 	</ItemDef>
 	<ItemDef OID="gift_cards_complete" Name="gift_cards_complete" DataType="text" Length="1" redcap:Variable="gift_cards_complete" redcap:FieldType="select" redcap:SectionHeader="Form Status">
 		<Question><TranslatedText>Complete?</TranslatedText></Question>

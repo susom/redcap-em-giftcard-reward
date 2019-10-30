@@ -1,0 +1,20 @@
+Variable / Field Name,Form Name,Section Header,Field Type,Field Label,"Choices, Calculations, OR Slider Labels",Field Note,Text Validation Type OR Show Slider Number,Text Validation Min,Text Validation Max,Identifier?,Branching Logic (Show field only if...),Required Field?,Custom Alignment,Question Number (surveys only),Matrix Group Name,Matrix Ranking?,Field Annotation
+reward_id,gift_cards,,text,Reward ID,,,,,,,,,,,,,
+brand,gift_cards,,text,Brand,,,,,,,,,,,,,
+egift_number,gift_cards,,text,eGift Number,,,,,,,,,,,,,
+challenge_code,gift_cards,,text,Challenge Code,,,,,,,,,,,,,
+amount,gift_cards,,text,Amount,,Number only (no $),number,,,,,,,,,,
+electronic_card_used,gift_cards,Status,descriptive,<div class='green text-center'><h5 class='text-center'>Gift Card Delivered Electronically</h5><b>[used_record]</b> was sent this reward on [used_ts] in project [used_pid]</div>,,,,,,,[status] = '2' and [reserved_ts] <> '',,,,,,
+electronic_card_used_2,gift_cards,,descriptive,<div class='red text-center'><h5 class='text-center'>Gift Card Not Claimed</h5>This gift required email verification.  More than 7 days have passed since <b>[used_record]</b> was sent an email to claim this reward.  You could reclaim this reward by clearing the <b>Date Used</b> field.</div>,,,,,,,"datediff([reserved_ts],""today"",""d"", ""YMD"", true) > 7 and [claimed_ts] = ''",,,,,,
+status,gift_cards,,radio,Status,"0, Not Ready|1, Ready (available)|2, Reserved (held)|3, Claimed (viewed)",,,,,,,,,,,,
+ready_instructions,gift_cards,,descriptive,"<div class='red'><b>To use this electronic gift card it must be:</b>
+- Marked as Ready
+- Have a blank 'Date Reserved' field</div>",,,,,,,[status] = '1' AND ([reserved_ts] <> ''),,,,,,
+reward_pid,gift_cards,Reward Information,text,Reward Project,,Project ID that claimed reward,,,,,"[status]>""1""",,,,,,
+reward_hash,gift_cards,,text,Reward Hash,,,,,,,"[status]>""1""",,,,,,
+reward_name,gift_cards,,text,Reward Name,,Name of Reward,,,,,"[status]>""1""",,,,,,
+reward_record,gift_cards,,text,Reward Record,,Record ID that claimed reward,,,,,"[status]>""1""",,,,,,
+url,gift_cards,,text,URL,,,,,,,"[status]>""1""",,,,,,
+reserved_ts,gift_cards,,text,Date Reserved,,,datetime_seconds_ymd,,,,"[status]>""1""",,,,,,
+claimed_ts,gift_cards,,text,Date Claimed,,Timestamp when actually viewed/sent to user,datetime_seconds_ymd,,,,"[status]>""1""",,,,,,
+reward_email_addr,gift_cards,,text,Reward Email Address,,,email,,,,,,,,,,

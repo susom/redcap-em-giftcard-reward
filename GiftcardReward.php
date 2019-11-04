@@ -13,6 +13,16 @@ require_once "util/GiftCardUtils.php";
 /**
  * Class GiftcardReward
  * @package Stanford\GiftcardReward
+ *
+ * This Gift Card Reward EM will automate the dispersement of gift cards based on logic specified in the configuration file.
+ *
+ * This module requires 2 projects to work in tandem.  The first project will be the gift card project specific to the study.
+ * This project will store specific information needed for the study but it must also contain two fields required by this
+ * module.  The additional required fields are: 1) a text field which stores the gift card library record id,
+ * and 2) a field to store the status of the gift card (possible options are Reserved, Claimed, etc.).
+ *
+ * Th
+ *
  */
 class GiftcardReward extends \ExternalModules\AbstractExternalModule
 {
@@ -47,6 +57,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $instances = $this->getSubSettings('rewards');
 
         // Next check the Gift Card Project to see if it is valid
+        $this->emDebug("In redcap_module_save_configuration ");
         list($validConfig, $mesageConfig) = $this->verifyConfigs($gcr_pid, $gcr_event_id, $instances);
         if (!$validConfig) {
             $this->emError($mesageConfig);
@@ -77,16 +88,25 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $gc_pid = $this->getProjectSetting("gcr-pid");
         $gc_event_id = $this->getProjectSetting("gcr-event-id");
         $alert_email = $this->getProjectSetting("alert-email");
+        $cc_email = $this->getProjectSetting("cc-email");
         $configs = $this->getSubSettings("rewards");
         $this->emDebug("Configs for project $project_id: " . json_encode($configs));
 
         foreach ($configs as $config => $config_info) {
 
-            $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record" . ", " . json_encode($config_info));
+            // Create a reward instance so we can process this record
+            try {
+                $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
+            } catch (Exception $ex) {
+                $this->emError("Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage());
+                return;
+            }
 
-            $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $alert_email, $config_info);
+            // Once the reward instance is created, check to see if this record should receive an award.  If so, send it.
             $status = $reward->verifyConfig();
             if ($status) {
+                $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record" . ", " . json_encode($config_info));
+
                 $eligible = $reward->checkRewardStatus($record);
                 if ($eligible) {
                     $message = "[PID:". $project_id . "] - record $record is eligible for " . $config_info["reward-title"] . " reward.";
@@ -101,7 +121,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
                         $this->emError($message);
                     }
                 }
-
             } else {
                 $message = "[PID:" . $project_id . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate for records!";
                 $this->emError($message);
@@ -113,6 +132,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
     /******************************************************************************************************************/
     /* METHODS                                                                                                       */
     /******************************************************************************************************************/
+
     /**
      * This function takes the settings for each Gift Card configuration and rearranges them into arrays of subsettings
      * instead of arrays of key/value pairs. This is called from javascript so each configuration
@@ -148,20 +168,26 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * will be checked for validity and the user will be warned it is not valid. If there no records
      * in the project yet, the logic when to send a reward cannot be tested.
      *
-     * @param $project_id
-     * @return array
+     * @param $gcr_pid - gift card library project id as specified in the config
+     * @param $gcr_event_id = gift card reward library project event id where the rewards will be kept
+     * @param $instances = array of configurations setup for gift card dispersement
+     * @param null $alert_email = Email which will be alerted when the number of gift cards is low
+     * @param null $cc_email = Email address to cc if setup in the configuration
+     * @return array with overall status and an array of errors
      */
-    public function verifyConfigs($gcr_pid, $gcr_event_id, $instances) {
+    public function verifyConfigs($gcr_pid, $gcr_event_id, $instances, $alert_email=null, $cc_email=null) {
 
         $errors = array();
         $overallStatus = true;
-        $alert_email = $this->getProjectSetting("alert-email");
+        if (is_null($alert_email)) $alert_email = $this->getProjectSetting("alert-email");
+        if (is_null($cc_email)) $cc_email = $this->getProjectSetting("cc-email");
+        $this->emDebug("In verifyConfigs - alert email: " . $alert_email . ", and cc email: " . $cc_email);
 
         foreach ($instances as $i => $instance) {
 
             // Create a new reward instance and verify the config
             $this->emDebug("Configuration " . ($i+1) . " is: " . json_encode($instance));
-            $ri = new RewardInstance($this, $gcr_pid, $gcr_event_id, $alert_email, $instance);
+            $ri = new RewardInstance($this, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
 
             list($result,$message) = $ri->verifyConfig();
             if ($result === false) {
@@ -198,6 +224,36 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $response = http_get($dailySummaryURL);
 
             $this->emDebug("Back from API call for project $proj_id: ", $response);
+        }
+    }
+
+    /**
+     * This function will be called by the Cron on a daily basis at 9am.  It will retrieve the list of projects
+     * that have selected the 'Enable Logic Check through Cron' checkbox in the gift card project configuration. For each
+     * project, each record, that has not already sent out a gift card, will be checked to see if they are eligible.  If
+     * the record is eligible, a gift card will be dispersed to them.
+     */
+    public function giftCardLogicCheck () {
+
+        // Find all the projects that are using the Gift Card Rewards EM
+        $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
+
+        while($row = db_fetch_assoc($enabled)) {
+
+            // Loop over each project where gift card is enabled
+            $proj_id = $row['project_id'];
+
+            // Create the API URL to this project.
+            $processCronURL = $this->getUrl('src/ProcessCron.php?pid=' . $proj_id, false, true);
+            $this->emDebug("Calling cron ProcessCron for project $proj_id at URL " . $processCronURL);
+
+            // Call the project through the API so it will be in project context.
+            $response = http_get($processCronURL);
+            if (!$response) {
+                $this->emLog("Problem calling Gift Card project $proj_id by Cron job");
+            } else {
+                $this->emDebug("Back from API call for project $proj_id: ", $response);
+            }
         }
     }
 

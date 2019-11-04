@@ -33,6 +33,7 @@ $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
 $gcr_pid = $module->getProjectSetting("gcr-pid");
 $gcr_event_id = $module->getProjectSetting("gcr-event-id");
 $alert_email = $module->getProjectSetting("alert-email");
+$cc_email = $module->getProjectSetting("cc-email");
 $configs = $module->getSubSettings("rewards");
 
 try {
@@ -53,7 +54,7 @@ foreach ($configs as $configNum => $config) {
     if (empty($config['optout-daily-summary'])) {
 
         // Make sure this config is valid
-        $ri = new RewardInstance($module, $gcr_pid, $gcr_event_id, $alert_email, $config);
+        $ri = new RewardInstance($module, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $config);
         list($valid, $message) = $ri->verifyConfig();
         if ($valid) {
             // If the config is valid, go retrieve the summary statistics

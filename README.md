@@ -1,15 +1,22 @@
 # Gift Card Rewards
 
-An EM to help automate the reward of gift cards for survey and other participation
+An External Module to help automate the dispersement of gift cards for used in projects offering rewards.
 
-This EM depends on having at least one master gift card repository where the actual gift card data is stored.  Off of this main project you can have many child projects that use the gift cards as rewards.
+This module requires two REDCap projects: 1) the project where study data is entered and 2) a gift card library repository project where 
+gift cards are loaded for dispersement to participants meeting study requirements.  These two projects work in tandem to disperse gift cards
+at the proper time.  The gift card library project can be used for more than one gift card study project.
+
+The EM is enabled for the gift card study project (not the gift card library). As part of the setup process, the gift card library must
+ be specified in the gift card library configuration. 
+
+
 
 # Setup
 To setup a gift card configuration for a project, follow these steps:
 
-    - Add the EM to the Gift Card Project
-    - Setup a configuration:
-    - Open the EM Configuration
+    - Enable this EM to the gift card project
+    - Edit the EM configuration:
+    - 
     - Select the Gift Card Library project (separate project that may hold gift cards for more than one project)
     - Create a gift card instance for each type of reward (Initial Survey, Completion, etc.)
     - Make sure there are no errors displayed at the top of the modal and Save.
@@ -33,3 +40,4 @@ Each time a record is saved in the Gift Card Project, a check will be performed 
 # Future Enhancements
     - Add the ability for the projects to download a standard Gift Card Library Template
     - Add the ability to rate limit the number of cards that can be awarded per day
+    - Add the option to use a cron job to check the reward logic

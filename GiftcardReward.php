@@ -207,7 +207,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * This function will be called by the Cron on a daily basis.  It will call DailySummary.php for each project that has
      * this EM enabled via an API call (so that the project context is setup).
      */
-    public function giftCardCron () {
+    public function giftCardDisplaySummaryCron() {
 
         // Find all the projects that are using the Gift Card Rewards EM
         $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
@@ -217,13 +217,11 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $proj_id = $row['project_id'];
 
             // Create the API URL to this project
-            $dailySummaryURL = $this->getUrl('src/DailySummary.php?pid=' . $proj_id, false, true);
+            $dailySummaryURL = $this->getUrl('src/DailySummary.php?pid=' . $proj_id, true, true);
             $this->emDebug("Calling cron Daily Summary for project $proj_id at URL " . $dailySummaryURL);
 
             // Call the project through the API so it will be in project context
             $response = http_get($dailySummaryURL);
-
-            $this->emDebug("Back from API call for project $proj_id: ", $response);
         }
     }
 
@@ -233,8 +231,9 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * project, each record, that has not already sent out a gift card, will be checked to see if they are eligible.  If
      * the record is eligible, a gift card will be dispersed to them.
      */
-    public function giftCardLogicCheck () {
+    public function giftCardLogicCheck() {
 
+        $this->emDebug("In giftCardLogicCheck");
         // Find all the projects that are using the Gift Card Rewards EM
         $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 
@@ -244,16 +243,11 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $proj_id = $row['project_id'];
 
             // Create the API URL to this project.
-            $processCronURL = $this->getUrl('src/ProcessCron.php?pid=' . $proj_id, false, true);
+            $processCronURL = $this->getUrl('src/ProcessCron.php?pid=' . $proj_id, true, true);
             $this->emDebug("Calling cron ProcessCron for project $proj_id at URL " . $processCronURL);
 
             // Call the project through the API so it will be in project context.
             $response = http_get($processCronURL);
-            if (!$response) {
-                $this->emLog("Problem calling Gift Card project $proj_id by Cron job");
-            } else {
-                $this->emDebug("Back from API call for project $proj_id: ", $response);
-            }
         }
     }
 

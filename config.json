@@ -16,9 +16,9 @@
       "institution": "Stanford University"
     },
     {
-      "name": "Jae Lee",
-      "email": "jael@stanford.edu",
-      "institution": "Stanford University"
+      "name": "Lee Ann Yasukawa",
+      "email": "yasukawa@stanfordhealthcare.org",
+      "institution": "Stanford Health Care"
     }
   ],
 
@@ -31,11 +31,37 @@
     "control-center": [
     ],
     "project": [
+      {
+          "name": "Gift Card Cron Initiator",
+          "icon": "gear",
+          "url": "src/RunCron.php"
+      }
     ]
   },
 
   "no-auth-pages": [
-    "src/DisplayReward"
+    "src/DisplayReward",
+    "src/DailySummary",
+    "src/ProcessCron"
+  ],
+
+  "crons": [
+    {
+      "cron_name": "gc_daily_summary",
+      "cron_description": "This cron will run once a day to send project owners a summary of their gift card dispersements",
+      "method": "giftCardDisplaySummaryCron",
+      "cron_max_run_time": 60,
+      "cron_frequency": 86400,
+      "cron_hour": "5:00"
+    },
+    {
+      "cron_name": "gc_logic_check",
+      "cron_description": "This cron will run once a day at 9am to check for gift card logic statuses which are based on a date.",
+      "method": "giftCardLogicCheck",
+      "cron_max_run_time": 60,
+      "cron_frequency": 86400,
+      "cron_hour": "9:00"
+    }
   ],
 
   "system-settings": [
@@ -141,40 +167,40 @@
           "type": "text"
         },
         {
-          "key": "cc-reward-email",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Email Reward</span></h6>Check this box if you want each reward email to be cc'd to the <b>alert-email</b> address entered above.",
-          "required": false,
-          "type": "checkbox"
-        },
-        {
-          "key": "reward-email-subject",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Subject</span></h6>Enter the subject for the reward email.<br>Piping is allowed",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "key": "reward-email-header",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Header</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
-          "required": false,
-          "type": "rich-text"
-        },
-        {
-          "key": "cc-verification-email",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Email Verification</span></h6>Check this box if you want each verification email to be cc'd to the <b>alert-email</b> address entered above.",
-          "required": false,
-          "type": "checkbox"
-        },
-        {
           "key": "reward-email-verification-subject",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Subject</span></h6>Enter the subject for the reward verification email.<br>Piping is allowed",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Notification Email Subject</span></h6>Enter the subject for the reward notification email. This is the email that is sent to a participant when they become eligible for a reward. The gift card is not included in this email, instead, a link to the gift card display is included in this email.<br>Piping is allowed",
           "required": true,
           "type": "text"
         },
         {
           "key": "reward-email-verification-header",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Header</span></h6>Enter text to appear before the details of the reward in the body of the initial email.<br>Piping is allowed.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Notification Email Header</span></h6>Enter text to appear before the link to the reward in the body of the email.<br>Piping is allowed.",
           "required": false,
           "type": "rich-text"
+        },
+        {
+          "key": "cc-verification-email",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Notification Email</span></h6>Check this box if you want each reward notification email to be cc'd to the <b>CC Email</b> address entered above.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "reward-email-subject",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Code Email Subject</span></h6>Enter the subject for the reward email when a participant would like a copy of the reward code.<br>Piping is allowed",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "key": "reward-email-header",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Code Email Header</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
+          "required": false,
+          "type": "rich-text"
+        },
+        {
+          "key": "cc-reward-email",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Email</span></h6>Check this box if you want each reward email to be cc'd to the <b>CC Email</b> address entered above.",
+          "required": false,
+          "type": "checkbox"
         },
         {
           "key": "options",

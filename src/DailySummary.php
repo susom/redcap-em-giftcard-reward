@@ -10,6 +10,7 @@ use REDCap;
 global $Proj;
 
 $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
+$module->emDebug("In DailySummary for project_id $pid");
 
 /*
  * We are called through an API call from the function giftCardCron in GiftcardReward.php.  giftCardCron runs daily
@@ -45,6 +46,7 @@ try {
     }
 } catch (Exception $ex) {
     $module->emError("Exception verifying Gift Card Library (pid=" . $gcr_pid . ") for project $pid - cannot create Daily Summary", $ex->getMessage());
+    return;
 }
 
 $body = '';
@@ -54,7 +56,12 @@ foreach ($configs as $configNum => $config) {
     if (empty($config['optout-daily-summary'])) {
 
         // Make sure this config is valid
-        $ri = new RewardInstance($module, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $config);
+        try {
+            $ri = new RewardInstance($module, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $config);
+        } catch (Exception $ex) {
+            $module->emError("Could not create RewardInstance (pid=" . $gcr_pid . ") for project $pid - cannot create Daily Summary", $ex->getMessage());
+            return;
+        }
         list($valid, $message) = $ri->verifyConfig();
         if ($valid) {
             // If the config is valid, go retrieve the summary statistics

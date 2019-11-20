@@ -35,6 +35,7 @@ foreach($configs as $config_num => $config_info) {
     $use_cron = $config_info["enable-cron"];
     if ($use_cron) {
 
+        $module->emDebug("Running through LogicChecker for project $pid and config " . ($config_num+1) . " with title " . $config_info["reward-title"]);
         // Instantiate a reward instance and make sure the config is valid. We only need to do this once.
         try {
             $reward = new RewardInstance($module, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
@@ -78,6 +79,6 @@ foreach($configs as $config_num => $config_info) {
         }
 
     } else {
-        $module->emDebug("Not using cron for config $config_num");
+        $module->emDebug("For project id $pid not using cron for config " . ($config_num+1));
     }
 }

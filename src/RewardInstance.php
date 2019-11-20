@@ -600,8 +600,8 @@ class RewardInstance
         $num_gc_claimed = 0;
         $today = strtotime(date('Y-m-d'));
 
-        // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount)
-        $filter = "[amount] = '" . $this->amount . "'";
+        // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount) and title
+        $filter = "[amount] = '" . $this->amount . "' and [reward_name] = '" . $this->title . "'";
         $data = REDCap::getData($this->gcr_pid, 'array', null, null, $this->gcr_event_id, null, null, null, null, $filter);
         if (!empty($data)) {
             foreach ($data as $record_id => $event_info) {

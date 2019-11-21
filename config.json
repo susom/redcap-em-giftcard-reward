@@ -16,9 +16,9 @@
       "institution": "Stanford University"
     },
     {
-      "name": "Jae Lee",
-      "email": "jael@stanford.edu",
-      "institution": "Stanford University"
+      "name": "Lee Ann Yasukawa",
+      "email": "yasukawa@stanfordhealthcare.org",
+      "institution": "Stanford Health Care"
     }
   ],
 
@@ -31,11 +31,37 @@
     "control-center": [
     ],
     "project": [
+      {
+          "name": "Gift Card Cron Initiator",
+          "icon": "gear",
+          "url": "src/RunCron.php"
+      }
     ]
   },
 
   "no-auth-pages": [
-    "src/DisplayReward"
+    "src/DisplayReward",
+    "src/DailySummary",
+    "src/ProcessCron"
+  ],
+
+  "crons": [
+    {
+      "cron_name": "gc_daily_summary",
+      "cron_description": "This cron will run once a day to send project owners a summary of their gift card dispersements",
+      "method": "giftCardDisplaySummaryCron",
+      "cron_max_run_time": 60,
+      "cron_frequency": 86400,
+      "cron_hour": "5"
+    },
+    {
+      "cron_name": "gc_logic_check",
+      "cron_description": "This cron will run once a day at 9am to check for gift card logic statuses which are based on a date.",
+      "method": "giftCardLogicCheck",
+      "cron_max_run_time": 60,
+      "cron_frequency": 86400,
+      "cron_hour": "9"
+    }
   ],
 
   "system-settings": [
@@ -77,6 +103,12 @@
     {
       "key": "alert-email",
       "name": "<h6><span class='text-lg badge badge-lg badge-danger'>Alert Email</h6></span>In the event gift cards are exhausted or any other error occurs, an email will be sent to this email address",
+      "required": true,
+      "type": "text"
+    },
+    {
+      "key": "cc-email",
+      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CC Email</h6></span>This email address will be cc'd on all verification emails sent to participants when they become eligible for a reward, when the option is selected. Also, this email will be sent a copy of each Rewards email, when the option is selected. Each configuration has an option for verification and rewards emails so you can pick and choose based on the specific reward.",
       "required": true,
       "type": "text"
     },
@@ -135,28 +167,40 @@
           "type": "text"
         },
         {
-          "key": "reward-email-subject",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Subject</span></h6>Enter the subject for the reward email.<br>Piping is allowed",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "key": "reward-email-header",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Header</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
-          "required": false,
-          "type": "rich-text"
-        },
-        {
           "key": "reward-email-verification-subject",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Subject</span></h6>Enter the subject for the reward verification email.<br>Piping is allowed",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Notification Email Subject</span></h6>Enter the subject for the reward notification email. This is the email that is sent to a participant when they become eligible for a reward. The gift card is not included in this email, instead, a link to the gift card display is included in this email.<br>Piping is allowed",
           "required": true,
           "type": "text"
         },
         {
           "key": "reward-email-verification-header",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Email Verification Header</span></h6>Enter text to appear before the details of the reward in the body of the initial email.<br>Piping is allowed.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Notification Email Header</span></h6>Enter text to appear before the link to the reward in the body of the email.<br>Piping is allowed.",
           "required": false,
           "type": "rich-text"
+        },
+        {
+          "key": "cc-verification-email",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Notification Email</span></h6>Check this box if you want each reward notification email to be cc'd to the <b>CC Email</b> address entered above.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "reward-email-subject",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Code Email Subject</span></h6>Enter the subject for the reward email when a participant would like a copy of the reward code.<br>Piping is allowed",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "key": "reward-email-header",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Code Email Header</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
+          "required": false,
+          "type": "rich-text"
+        },
+        {
+          "key": "cc-reward-email",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Email</span></h6>Check this box if you want each reward email to be cc'd to the <b>CC Email</b> address entered above.",
+          "required": false,
+          "type": "checkbox"
         },
         {
           "key": "options",
@@ -185,6 +229,12 @@
         {
           "key": "allow-multiple-rewards",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Allow Multiple Rewards</span></h6>When <b>Allow Multiple Rewards</b> is selected, rewards will be sent to an email address that has already received a reward. When this is NOT selected, a reward will <b>not</b> be sent if the same email address was already sent a reward.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "enable-cron",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Enable 9am cron job to check logic</h6></span>When checked, this option allows for the 9am cron job to check the gift card reward logic to see if it is true.  If true, a giftcard will be dispersed to the participant - same as when a participant record is saved. When left unchecked, the gift card logic check is only performed when the record is saved.",
           "required": false,
           "type": "checkbox"
         }

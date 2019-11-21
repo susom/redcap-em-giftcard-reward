@@ -105,6 +105,7 @@ function verifyGiftCardRepo($gcr_pid, $gcr_event_id) {
     }
 }
 
+
 /**
  * This is just a central repository for the gift card library required fields
  *

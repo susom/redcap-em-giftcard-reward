@@ -19,7 +19,7 @@ if (!empty($_POST['action'])) {
             /*
             $form = $_POST['form'];
             list($result, $message) = $module->insertForm($form);
-
+\
             $module->emDebug("INSERT FORM", $result);
             $message = $result ? "$form Created!" : $message;
             */
@@ -41,21 +41,28 @@ if (!empty($_POST['action'])) {
             $raw = $_POST['raw'];
             $gclPid = $raw['gcr-pid'];
             $gclEventID = $raw['gcr-event-id'];
-            $alertEmail = $raw['alert-email'];
-            $ccEmail = $raw['cc-email'];
-            unset($raw['gcr-pid'], $raw['gcr-event-id'], $raw['alert-email'], $raw['cc-email']);
+            unset($raw['gcr-pid'], $raw['gcr-event-id']);
             $data = \ExternalModules\ExternalModules::formatRawSettings($module->PREFIX, $module->getProjectId(), $raw);
 
             // At this point we have the settings in individual arrays for each value.  The equivalent to ->getProjectSettings();
+
             // For this module, we want the subsettings of 'instance' - the repeating block of config
             $instances = $module->parseSubsettingsFromSettings('rewards', $data);
+            //$module->emDebug("formatted instances: ", $instances);
+
+            // foreach ($instances as $k => $v) {
+            //     foreach ($v as $key => $val) {
+            //         $module->emDebug($key, $val);
+            //     }
+            // }
+            // $module->emDebug("formatted settings: ", $data);
 
             try {
                 list($resultLib, $messageLib) = verifyGiftCardRepo($gclPid, $gclEventID);
             } catch (Exception $ex) {
                 $module->emError("Exception when verifying Gift Card library in verifyGiftCardRepo");
             }
-            list($resultProj,$messageProj) = $module->verifyConfigs( $gclPid, $gclEventID, $instances, $alertEmail, $ccEmail);
+            list($resultProj,$messageProj) = $module->verifyConfigs( $gclPid, $gclEventID, $instances );
 
             $result = true;
             $message = array();

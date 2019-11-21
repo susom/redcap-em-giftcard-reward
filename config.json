@@ -52,7 +52,7 @@
       "method": "giftCardDisplaySummaryCron",
       "cron_max_run_time": 60,
       "cron_frequency": 86400,
-      "cron_hour": "5:00"
+      "cron_hour": "5"
     },
     {
       "cron_name": "gc_logic_check",
@@ -60,7 +60,7 @@
       "method": "giftCardLogicCheck",
       "cron_max_run_time": 60,
       "cron_frequency": 86400,
-      "cron_hour": "9:00"
+      "cron_hour": "9"
     }
   ],
 

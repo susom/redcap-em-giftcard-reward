@@ -14,13 +14,14 @@ class RewardInstance
     private $title, $logic, $fk_field, $fk_event_id, $gc_status, $amount,
         $email, $email_subject, $email_header, $email_verification,
         $email_verification_subject, $email_verification_header,
-        $email_from, $email_address, $email_event_id;
+        $email_from, $email_address, $email_event_id, $alert_email,
+        $cc_verification_email, $cc_reward_email, $cc_email;
 
     private $optout_low_balance, $low_balance_number, $optout_daily_summary, $allow_multiple_rewards;
 
     private $gcr_pid, $gcr_event_id, $gcr_pk;
 
-    public function __construct($module, $gcr_pid, $gcr_event_id, $alert_email, $instance)
+    public function __construct($module, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance)
     {
         // These are Gift Card project parameters
         global $Proj;
@@ -38,14 +39,17 @@ class RewardInstance
         $this->amount                       = $instance['reward-amount'];
 
         // These are reward email parameters
+        $this->cc_reward_email              = $instance['cc-reward-email'];
         $this->email                        = $instance['reward-email'];
         $this->email_from                   = $instance['reward-email-from'];
         $this->email_subject                = $instance['reward-email-subject'];
         $this->email_header                 = $instance['reward-email-header'];
+        $this->cc_verification_email        = $instance['cc-verification-email'];
         $this->email_verification           = $instance['reward-email-verification'];
         $this->email_verification_subject   = $instance['reward-email-verification-subject'];
         $this->email_verification_header    = $instance['reward-email-verification-header'];
         $this->alert_email                  = $alert_email;
+        $this->cc_email                     = $cc_email;
 
         // There are gift card options
         $this->optout_low_balance           = $instance['optout-low-balance'];
@@ -150,6 +154,14 @@ class RewardInstance
             }
         }
 
+        // If the configuration has the checkbox checked to cc either the verification or reward email, make sure we
+        // have an email address specified [cc-email]
+        if (($this->cc_reward_email === 'true') || ($this->cc_verification_email === 'true')) {
+            if (empty($this->cc_email)) {
+                $message .= "<li>Emails should be cc'd but the CC email address is blank. Please fill in the CC email address field.</li>";
+            }
+        }
+
 
         // Now check the logic which will determine when to send a gift card -- make sure it is valid
         if (!empty($this->logic)) {
@@ -176,6 +188,7 @@ class RewardInstance
             return array(false, $message);
         }
     }
+
 
     /**
      * This function will check to see if the field $field is empty and if so, it will add
@@ -501,8 +514,9 @@ class RewardInstance
     }
 
     /**
-     * Send the recipient and email with a link so they can retrieve their gift card
+     * Send the recipient the email with a link so they can retrieve their gift card
      *
+     * @param $url
      * @param $record_id
      * @return bool - Status of the sending of the email
      */
@@ -523,8 +537,14 @@ class RewardInstance
             $emailBody = $bodyDescription;
         }
 
-        $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody);
-        $this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody");
+        // Check to see if the config checkbox is checked to cc the alert-email address of this reward.
+        $cc_email = null;
+        if ($this->cc_verification_email == 'true') {
+            $cc_email = $this->cc_email;
+        }
+        $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody, $cc_email);
+        $this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody, CC: $cc_email");
+
 
         return $status;
     }
@@ -580,8 +600,8 @@ class RewardInstance
         $num_gc_claimed = 0;
         $today = strtotime(date('Y-m-d'));
 
-        // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount)
-        $filter = "[amount] = '" . $this->amount . "'";
+        // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount) and title
+        $filter = "[amount] = '" . $this->amount . "' and [reward_name] = '" . $this->title . "'";
         $data = REDCap::getData($this->gcr_pid, 'array', null, null, $this->gcr_event_id, null, null, null, null, $filter);
         if (!empty($data)) {
             foreach ($data as $record_id => $event_info) {
@@ -671,18 +691,19 @@ class RewardInstance
      * @param $emailBody - Email Body
      * @return bool - true/false if email was successfully sent
      */
-    private function sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody) {
+    private function sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody, $ccEmail=null) {
 
         $this->module->emDebug("In sendEmail: To " . $emailTo . ", and From " . $emailFrom . ", email Subject " . "$emailSubject" .
-            " email Body: " . $emailBody);
+            " email Body: " . $emailBody . ", cc_email: " . $ccEmail);
 
-        $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody);
+        $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody, $ccEmail);
         if (!$status) {
             $email = array(
                 "To:"       => $emailTo,
                 "From:"     => $emailFrom,
                 "Subject:"  => $emailSubject,
-                "Body:"     => $emailBody
+                "Body:"     => $emailBody,
+                "CC:"       => $ccEmail
             );
             $this->module->emError("Attempted to send email to $emailTo but received error.", json_encode($email));
         }

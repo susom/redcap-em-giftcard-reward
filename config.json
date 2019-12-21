@@ -35,7 +35,26 @@
   },
 
   "no-auth-pages": [
-    "src/DisplayReward"
+    "src/DisplayReward",
+    "src/DailySummary",
+    "src/ProcessCron"
+  ],
+
+  "crons": [
+    {
+      "cron_name": "gc_daily_summary",
+      "cron_description": "This cron will run once a day to send project owners a summary of their gift card dispersements",
+      "method": "giftCardDisplaySummaryCron",
+      "cron_hour": "6",
+      "cron_minute": "0"
+    },
+    {
+      "cron_name": "gc_logic_check",
+      "cron_description": "This cron will run once a day at 9am to check for gift card logic statuses which are based on a date.",
+      "method": "giftCardLogicCheck",
+      "cron_hour": "9",
+      "cron_minute": "0"
+    }
   ],
 
   "system-settings": [

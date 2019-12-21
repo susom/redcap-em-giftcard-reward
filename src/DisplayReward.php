@@ -13,7 +13,7 @@ $action = isset($_GET['action']) && !empty($_GET['action']) ? $_GET['action'] : 
 $emailAddr = isset($_GET['e_addr']) && !empty($_GET['e_addr']) ? $_GET['e_addr'] : null;
 $claimed = "Claimed";
 
-//$module->emDebug("Token: " . $gcToken . ", pid: " . $pid . ", action: " . $action . ", email addr: " . $emailAddr);
+$module->emDebug("Token: " . $gcToken . ", pid: " . $pid . ", action: " . $action . ", email addr: " . $emailAddr);
 
 /*
  * This page is called from a link sent to the gift card recipients in email. The status in the gift card library
@@ -40,6 +40,7 @@ $setupComplete = false;
  */
 if ($action === "sendEmail") {
 
+    $module->emDebug("Going to sendRewardEmail");
     $status = sendRewardEmail($pid, $gcToken, $emailAddr);
     if (!$status) {
         $module->emError("Error encountered when trying to send email with reward information for request pid $pid, token $gcToken ");

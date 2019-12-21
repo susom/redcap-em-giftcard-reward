@@ -1,5 +1,5 @@
 # Gift Card Rewards
-Hello!
+
 This module will automate the dispersement of gift cards for use in projects offering rewards.
 
 This module requires two REDCap projects: 1) the project where study data is stored and (study project), and 2) a gift card library 

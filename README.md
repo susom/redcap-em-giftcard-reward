@@ -90,7 +90,7 @@ There are 2 cron jobs running daily:
 
 Gift Card Summary
 
-The Summary cron job will send a nightly updates to the Alert Email address specified in the configuration file.  The nightly summary 
+The Summary cron job will send a daily update at 6am to the Alert Email address specified in the configuration file.  The nightly summary 
 displays the following data:
 
 ![Nightly Summary](img/daily_summary.png)

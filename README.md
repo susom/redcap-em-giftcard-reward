@@ -30,6 +30,29 @@ Each time a record is saved in the Gift Card Project, a check will be performed 
     4) The record holding the reward in the Gift Card Library project will have a status of Claimed with a timestamp
     5) The record holding the participant information in the Gift Card Project will have the status Claimed
     
+Once the participant clicks on the link received in the rewards email, the reward display appears as follows:
+
+![RewardDisplay](img/reward_display.png)
+
+Participants have the option to send themselves or someone else a copy of the reward number for future reference.
+
+#Cron Processing
+
+There are 2 cron jobs running daily:
+
+Gift Card Summary
+
+The Summary cron job will send a daily update at 6am to the Alert Email address specified in the configuration file.  The nightly summary 
+displays the following data:
+
+![Nightly Summary](img/daily_summary.png)
+
+Logic Checker
+
+The Logic Checker cron job will run at 9am each morning and look for the configurations who have the "Enable 9am cron job to check logic" checkbox enabled.
+Configurations should enable this cron logic checker only when they have a date component to their reward logic.  This cron will ensure the
+reward is sent on the appropriate date even if the record is not saved on the day it is eligible.
+
 # Future Enhancements
     - Add the ability for the projects to download a standard Gift Card Library Template
     - Add the ability to rate limit the number of cards that can be awarded per day

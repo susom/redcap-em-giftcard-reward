@@ -212,7 +212,8 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         // Find all the projects that are using the Gift Card Rewards EM
         $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 
-        while($row = db_fetch_assoc($enabled)) {
+        //while($row = db_fetch_assoc($enabled)) {
+        while($row = $enabled->fetch_assoc()){
 
             $proj_id = $row['project_id'];
 
@@ -237,7 +238,8 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         // Find all the projects that are using the Gift Card Rewards EM
         $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 
-        while($row = db_fetch_assoc($enabled)) {
+        //while($row = db_fetch_assoc($enabled)) {
+        while($row = $enabled->fetch_assoc()){
 
             // Loop over each project where gift card is enabled
             $proj_id = $row['project_id'];

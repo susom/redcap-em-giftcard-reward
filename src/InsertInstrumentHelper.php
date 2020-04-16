@@ -5,7 +5,7 @@ namespace Stanford\GiftcardReward;
 use \MetaData;
 use \ZipArchive;
 
-require_once APP_PATH_DOCROOT . 'Design/functions.php';
+//require_once APP_PATH_DOCROOT . 'Design/functions.php';
 
 /**
  * Class InsertInstrumentHelper
@@ -71,7 +71,7 @@ class InsertInstrumentHelper
         file_put_contents($dd_filename, $instrumentDD);
 
         // Parse DD
-        $this->dd_array = excel_to_array($dd_filename);
+        $this->dd_array = \Design::excel_to_array($dd_filename);
 
         // Get rid of temp file
         unlink($dd_filename);

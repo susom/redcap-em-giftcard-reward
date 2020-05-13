@@ -31,11 +31,6 @@
     "control-center": [
     ],
     "project": [
-      {
-          "name": "Gift Card Cron Initiator",
-          "icon": "gear",
-          "url": "src/RunCron.php"
-      }
     ]
   },
 
@@ -107,7 +102,7 @@
     {
       "key": "cc-email",
       "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CC Email</h6></span>This email address will be cc'd on all verification emails sent to participants when they become eligible for a reward, when the option is selected. Also, this email will be sent a copy of each Rewards email, when the option is selected. Each configuration has an option for verification and rewards emails so you can pick and choose based on the specific reward.",
-      "required": true,
+      "required": false,
       "type": "text"
     },
     {

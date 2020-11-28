@@ -15,7 +15,8 @@ class RewardInstance
         $email, $email_subject, $email_header, $email_verification,
         $email_verification_subject, $email_verification_header,
         $email_from, $email_address, $email_event_id, $alert_email,
-        $cc_verification_email, $cc_reward_email, $cc_email;
+        $cc_verification_email, $cc_reward_email, $cc_email,
+        $brand_field, $brand_name;
 
     private $optout_low_balance, $low_balance_number, $optout_daily_summary, $allow_multiple_rewards;
 
@@ -37,6 +38,7 @@ class RewardInstance
         $this->fk_event_id                  = $instance['reward-fk-event-id'];
         $this->gc_status                    = $instance['reward-status'];
         $this->amount                       = $instance['reward-amount'];
+        $this->brand_field                  = $instance['brand-field'];
 
         // These are reward email parameters
         $this->cc_reward_email              = $instance['cc-reward-email'];
@@ -118,7 +120,6 @@ class RewardInstance
         $all_forms = array();
         $all_forms[0] = $metaData[$this->fk_field]['form_name'];
         $all_forms[1] = $metaData[$this->gc_status]['form_name'];
-        //$all_forms[2] = $metaData[$this->email]['form_name'];
         $diff = array_diff($all_forms, $this->Proj->eventsForms[$this->fk_event_id]);
         if (!empty($diff)) {
             if (count($diff) == 1) {
@@ -255,13 +256,55 @@ class RewardInstance
         }
 
         // Test the logic for this record
+        $this->module->emDebug("This is for record " . $record . ", with status = $status");
         if (($record !== null) && ($status !== false)) {
+            // If this config is filtering on brand, find out what Brand they want
+            // The brand is a radio button so we don't get misspelling.  We need to get the
+            // data dictionary to find out the actual brand.
+            if ($this->brand_field != '') {
+                $options = $this->retrieveFieldOptions();
+                $brand_option = $thisRecord[$this->brand_field];
+                $this->brand_name = $options[$brand_option];
+            }
+
             $status = REDCap::evaluateLogic($this->logic, $this->project_id, $record);
             $this->module->emDebug("Logic evaluated to '$status' for record $record for project $this->project_id - Logic: " . $this->logic);
         }
 
         return $status;
     }
+
+    /**
+     * This function finds the options for a radio button field. Specifically the brand names should be
+     * listed in this field so as to avoid data entry errors.
+     *
+     * @return array
+     * @throws Exception
+     */
+    function retrieveFieldOptions() {
+
+        // Split the selection list so we can determine which option is selected for our record
+        $field_dd = REDCap::getDataDictionary($this->project_id, 'array', false, $this->brand_field);
+
+        $options = array();
+        if ($field_dd[$this->brand_field]['field_type'] == 'radio') {
+
+            // Split the list of options from a string into arrays
+            $selections = explode('|', $field_dd[$this->brand_field]['select_choices_or_calculations']);
+
+            foreach ($selections as $selection) {
+                $split = explode(',', $selection);
+                $key = trim($split[0]);
+                $value = trim($split[1]);
+                $options[$key] = $value;
+            }
+        } else {
+            $this->module->emError("The field " . $this->brand_field . " needs to be a radio field with list of brand names.");
+        }
+        return $options;
+    }
+
+
 
     /**
      * This record qualifies for a reward so process it.
@@ -273,7 +316,6 @@ class RewardInstance
 
         $message = '';
         $valid = false;
-
 
         $gcr_required_fields = getGiftCardLibraryFields();
         // We found that this user is eligible for an gift card, so find the next award that fits our criteria
@@ -312,7 +354,7 @@ class RewardInstance
      */
     private function sendAlertEmailNoGiftCards($record_id) {
 
-        global $redcap_version;
+        global $redcap_version, $module;
 
         // Put together the URL to this redcap record so we can include it in the email.
         $recordUrl = APP_PATH_WEBROOT_FULL . "redcap_v{$redcap_version}/DataEntry/record_home.php?pid=$this->project_id&id=$record_id";
@@ -322,7 +364,7 @@ class RewardInstance
         $emailFrom = $this->alert_email;
         $emailSubject = "ALERT: No more Gift Cards available for Reward $this->title";
         $emailBody = "Record $record_id is eligible for a gift card but there are none available.<br>".
-                     " Once there are more available gift cards available, make sure the eligibility logic for ".
+                     " Once there are more available gift cards available, make sure the eligibility logic for record ". $record_id .
                      " is still valid and re-save the record.<br>".
                      " Link to record: <br>".
                      " <a href='$recordUrl'>Record $record_id</a>";
@@ -382,8 +424,15 @@ class RewardInstance
             $filter .= " and [amount] = " . $this->amount;
         }
 
+        if ($this->brand_field != '') {
+            $filter .= " and [brand] = '" . $this->brand_name . "'";
+        }
+
+        $this->module->emDebug("this is the brand in retrieveGiftCardRewardsList: " . $this->brand_name);
+        $this->module->emDebug("Filter: " . $filter);
         $data = REDCap::getData($this->gcr_pid, 'array', null, $gcr_required_fields, $this->gcr_event_id,
             null, null, null, null, $filter);
+        $this->module->emDebug("Records: " . json_encode($data));
         return $data;
     }
 
@@ -601,44 +650,63 @@ class RewardInstance
         $today = strtotime(date('Y-m-d'));
 
         // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount) and title
-        $filter = "[amount] = '" . $this->amount . "' and [reward_name] = '" . $this->title . "'";
+        $filter = "[amount] = '" . $this->amount . "'";
+
         $data = REDCap::getData($this->gcr_pid, 'array', null, null, $this->gcr_event_id, null, null, null, null, $filter);
         if (!empty($data)) {
+            $brand_type = array();
             foreach ($data as $record_id => $event_info) {
                 foreach ($event_info as $event_id => $record) {
 
-                    // Convert timestamps so we can do date math
-                    $datetime_sent = strtotime(date($record['reserved_ts']));
-                    $date_sent = strtotime(date("Y-m-d", $datetime_sent));
-
-                    if ($record['claimed_ts'] !== '') {
-                        $datetime_claimed = strtotime(date($record['claimed_ts']));
-                        $date_claimed = strtotime(date("Y-m-d", $datetime_claimed));
-                    } else {
-                        $date_claimed = '';
-                    }
                     $status = $record['status'];
-                    $num_days_sent = intval(($today - $date_sent)/86400);
-                    $num_days_claimed = intval(($today - $date_claimed)/86400);
+                    if ($record['reward_name'] == $this->title) {
+                        // Convert timestamps so we can do date math
+                        $datetime_sent = strtotime(date($record['reserved_ts']));
+                        $date_sent = strtotime(date("Y-m-d", $datetime_sent));
 
-                    // Num of gift cards sent yesterday
-                    if (($num_days_sent == 1) && (!empty($record['reserved_ts']))) {
-                        $rewards_sent_yesterday++;
-                    }
+                        if ($record['claimed_ts'] !== '') {
+                            $datetime_claimed = strtotime(date($record['claimed_ts']));
+                            $date_claimed = strtotime(date("Y-m-d", $datetime_claimed));
+                        } else {
+                            $date_claimed = '';
+                        }
 
-                    // Num of gift cards claimed yesterday
-                    if (($num_days_claimed == 1) && ($status == 3)) {
-                        $rewards_claimed_yesterday++;
-                    }
+                        $num_days_sent = intval(($today - $date_sent) / 86400);
+                        if ($date_claimed != '') {
+                            $num_days_claimed = intval(($today - $date_claimed) / 86400);
+                        } else {
+                            $num_days_claimed = 0;
+                        }
 
-                    // Num of gift cards sent > 7 days ago and have not been viewed
-                    if (($num_days_sent > 7) && ($status == 2)) {
-                        $num_gc_sent_more_than_7days_ago++;
-                    }
+                        // Num of gift cards sent yesterday
+                        if (($num_days_sent == 1) && (!empty($record['reserved_ts']))) {
+                            $rewards_sent_yesterday++;
+                        }
 
-                    // Num of gift cards sent < 7 days ago and have not been viewed
-                    if (($num_days_sent <= 7) && ($status == 2)) {
-                        $num_gc_send_less_than_7days_ago++;
+                        // Num of gift cards claimed yesterday
+                        if (($num_days_claimed == 1) && ($status == 3)) {
+                            $rewards_claimed_yesterday++;
+                        }
+
+                        // Num of gift cards sent > 7 days ago and have not been viewed
+                        if (($num_days_sent > 7) && ($status == 2)) {
+                            $num_gc_sent_more_than_7days_ago++;
+                        }
+
+                        // Num of gift cards sent < 7 days ago and have not been viewed
+                        if (($num_days_sent <= 7) && ($status == 2)) {
+                            $num_gc_send_less_than_7days_ago++;
+                        }
+
+                        // Num of gift cards in total have been awarded
+                        if (($status == 2) || ($status == 3)) {
+                            $num_gc_awarded++;
+                        }
+
+                        // Num of gift cards in total have been claimed
+                        if ($status == 3) {
+                            $num_gc_claimed++;
+                        }
                     }
 
                     // Num of gift cards with NOT Ready status (value of 0)
@@ -648,19 +716,14 @@ class RewardInstance
 
                     // Num of gift cards with Ready status (value of 1 means Ready)
                     if ($status == 1) {
+                        $brand = $record['brand'];
                         $num_gc_available++;
+                        if (empty($brand_type[$brand])) {
+                            $brand_type[$brand] = 1;
+                        } else {
+                            $brand_type[$brand]++;
+                        }
                     }
-
-                    // Num of gift cards in total have been awarded
-                    if (($status == 2) || ($status == 3)) {
-                        $num_gc_awarded++;
-                    }
-
-                    // Num of gift cards in total have been claimed
-                    if ($status == 3) {
-                        $num_gc_claimed++;
-                    }
-
                 }
             }
 
@@ -676,7 +739,8 @@ class RewardInstance
             "not_ready"             => $num_gc_notready,
             "num_available"         => $num_gc_available,
             "num_awarded"           => $num_gc_awarded,
-            "num_claimed"           => $num_gc_claimed
+            "num_claimed"           => $num_gc_claimed,
+            "brand"                 => $brand_type
         );
 
         return $results;

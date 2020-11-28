@@ -98,9 +98,18 @@ function createConfigSummary($configNum, $stats) {
     $message .= "<li>Number of gift cards that were sent > 7 days ago and not claimed: " . $stats['sent_gt7days_ago'] . "</li>";
     $message .= "<li>Number of gift cards that were sent <= 7 days ago and not claimed: " . $stats['sent_lt7days_ago'] . "</li>";
     $message .= "<li>Number of gift cards with status 'Not Available': " . $stats['not_ready'] . "</li>";
-    $message .= "<li>Number of gift cards that are available to be awarded: " . $stats['num_available'] . "</li>";
     $message .= "<li>Number of gift cards that were awarded: " . $stats['num_awarded'] . "</li>";
     $message .= "<li>Number of gift cards that were claimed: " . $stats['num_claimed'] . "</li>";
+    $message .= "<li>Number of gift cards that are available to be awarded: " . $stats['num_available'] . "</li>";
+
+    // If these are split by brands, show each brand quantity as well as the total
+    if (!empty($stats['brand'])) {
+        $message .= "<ul>";
+        foreach ($stats['brand'] as $brand => $count) {
+            $message .= "<li>Number of gift cards that are available to be awarded for " . $brand . ": " . $count . "</li>";
+        }
+        $message .= "</ul>";
+    }
     $message .= "</ul><br>";
 
     return $message;

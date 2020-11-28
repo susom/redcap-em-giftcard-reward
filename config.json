@@ -148,6 +148,12 @@
           "type": "text"
         },
         {
+          "key": "brand-field",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Brand</span></h6>Select the field that holds the brand that will be used for filtering gift cards. If empty, brand filtering is not performed.",
+          "required": false,
+          "type": "field-list"
+        },
+        {
           "key": "reward-email",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Address</span></h6>Enter the email address field from this project where the reward will be sent. This field does not need to be in the same event as the other gift card fields but it cannot be on a repeating form or in a repeating event or in multiple events.",
           "required": true,

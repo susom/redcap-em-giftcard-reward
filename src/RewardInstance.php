@@ -238,8 +238,8 @@ class RewardInstance
             return $status;
         } else {
 
-            // If a record was given, make sure a reward was not already given.  We need the whole record
-            // because the email address might be in a different event.
+            // If a record was given, make sure a reward was not already given for the same email address.
+            // We need the whole record because the email address might be in a different event.
             $data = REDCap::getData($this->project_id, 'array', $record, null, array($this->email_event_id, $this->fk_event_id));
             $thisRecord = $data[$record][$this->fk_event_id];
             if (is_null($this->email_event_id)) {
@@ -317,6 +317,15 @@ class RewardInstance
         $message = '';
         $valid = false;
 
+        // Check to see if this participant has already been rewarded a gift card. If so, don't
+        // send another one unless the configuation checkbox was selected that it is okay to send.
+        list($valid, $message) = $this->checkForPreviousReward($record_id);
+        if (!$valid) {
+
+            // Even though it is not valid to send a reward, we are successfully done processing
+            return array(true, $message);
+        }
+
         $gcr_required_fields = getGiftCardLibraryFields();
         // We found that this user is eligible for an gift card, so find the next award that fits our criteria
         list($found, $reward_record) = $this->findNextAvailableReward($gcr_required_fields);
@@ -324,20 +333,14 @@ class RewardInstance
 
             // We were not able to find a reward that meets our criteria.
             $message = "No reward was found in project " . $this->gcr_pid . " which meets our criteria for $this->title reward";
+            if (!empty($this->brand_name)) {
+                $message .= " for brand " . $this->brand_name;
+            }
 
             // Send email to the alert email address to notify them there are no longer any gift cards and update record
             $this->sendAlertEmailNoGiftCards($record_id);
 
         } else {
-
-            // Check to see if this participant has already been rewarded a gift card. If so, don't
-            // send another one unless the configuation checkbox was selected that it is okay to send.
-            list($valid, $message) = $this->checkForPreviousReward($record_id);
-            if (!$valid) {
-
-                // Even though it is not valid to send a reward, we are successfully done processing
-                return array(true, $message);
-            }
 
             // There is a valid reward available so reserve it
             list($valid, $message) = $this->reserveReward($record_id, $reward_record);
@@ -396,6 +399,9 @@ class RewardInstance
         if (!$this->optout_low_balance and !empty($this->low_balance_number) and
                 (count($data) <= $this->low_balance_number) and (count($data) > 0)) {
             $emailBody = "There are " . (count($data)-1) . " rewards available for gift card configuation " . $this->title;
+            if (!empty($this->brand_field)) {
+                $emailBody .= " for brand " . $this->brand_name;
+            }
             $status = $this->sendEmail($this->alert_email, $this->alert_email, "Gift Card Low Balance Notification", $emailBody);
         }
 

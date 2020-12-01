@@ -511,16 +511,30 @@ class RewardInstance
         $message = '';
         $gcr_record_id = $reward_record[$this->gcr_pk];
 
-        // Create a unique hash for this reward (record/reward)
-        $hash = $this->createRewardHash($record_id);
+        // If the reward code is actually a link address, we will put the link into the email body
+        $gcr_record_code = $reward_record['egift_number'];
+        if (substr($gcr_record_code, 0, 4) == "http") {
 
-        // Create the URL for this reward. Add on the project and hash
-        $url = $this->module->getUrl("src/DisplayReward.php", true, true);
-        $url .= "&reward_token=" . $hash;
-        $this->module->emDebug("This is the hash: $hash for record $record_id and URL: " . $url);
+            // When the gift card code is a url, put it in the body of the email.
+            $bodyDescription = 'Please follow this link to access your gift card:<br>' .
+                '<a href="' . $gcr_record_code. '">' . $gcr_record_code . '</a>';
+
+        } else {
+
+            // Create a unique hash for this reward (record/reward)
+            $hash = $this->createRewardHash($record_id);
+
+            // Create the URL for this reward. Add on the project and hash
+            $url = $this->module->getUrl("src/DisplayReward.php", true, true);
+            $url .= "&reward_token=" . $hash;
+
+            // Set up the verification email to send to the recipient
+            $bodyDescription = 'To access your gift card reward, please select the link below:<br>' .
+                '<a href="' . $url . '">' . $url . '</a>';
+        }
 
         // Send the verification email to the recipient
-        $status = $this->sendEmailWithLinkToReward($url, $record_id);
+        $status = $this->sendEmailWithLinkToReward($record_id, $bodyDescription);
         $this->module->emDebug("This is the status '$status' from sendingEmail for record $record_id");
         if ($status) {
 
@@ -575,11 +589,8 @@ class RewardInstance
      * @param $record_id
      * @return bool - Status of the sending of the email
      */
-    private function sendEmailWithLinkToReward($url, $record_id) {
+    private function sendEmailWithLinkToReward($record_id, $bodyDescription) {
 
-        // Set up the verification email to send to the recipient
-        $bodyDescription = 'To access your gift card reward, please select the link below:<br>'.
-                           '<a href="' . $url . '">' . $url. '</a>';
         $emailTo = $this->email_address;
         $emailFrom = $this->email_from;
         $subject = $this->email_verification_subject;

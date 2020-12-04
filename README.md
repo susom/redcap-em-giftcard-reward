@@ -54,19 +54,19 @@ The gift card library project must have the following fields:
 There is an xml and csv template in Github which <b>should</b> be used for the library project. The gift card information, 
 which is dispersed to participants, can be imported into the project from a csv file.
 
-![ExternalModule](img/external_module.png)
-
 The gift card library project supports sending participants the actual reward code so they can redeem the reward.  It also
 supports a link to a third party website where they can redeem the reward.  If the value entered in the 
 <i>[egift_number]</i> field starts with 'http', then the value of the field will be setup as a link in the email so
 participants can click on the link to retrieve their reward. When using links, the redemption of the reward is outside
 of Redcap so the status of the reward will stay at 'Reserved' and will not change to 'Claimed'.
 
-When the reward is a alphanumeric string, then Redcap will track when the user clicks on the link in the email and turns
+When the reward is an alphanumeric string, then Redcap will track when the user clicks on the link in the email and turns
 the status to 'Claimed'.
 
 If a gift card was erroneously sent out, the gift card record can be reset to 'Ready' and the record can be re-used. The
 gift card can only be redeemed with a valid token so if the token is deleted, that gift card can no longer be 'Claimed'.
+
+![ExternalModule](img/external_module.png)
 
 
 Once the module is enabled for the gift card project, the External Module configuration file must be filled out.

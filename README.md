@@ -16,8 +16,8 @@ the status of the reward to Reserved and saving a Reserved timestamp.  An availa
 from the configuration file.  The configuration file can specify a gift card denomination to give for each
 timepoint and gift cards can be filtered by brand. The brand filter is performed by creating a radio button 
 in the study project to hold the brands available for distribution.  The description of each radio
-selection must match the brand entered in the library project. Using a radio button will hopefully cutdown
-on input errors. The denomination amount entered should only include the dollar amount and not the dollar sign.
+selection must match the brand entered in the library project. Using a radio button will hopefully reduce
+input errors. The denomination amount entered should only include the dollar amount and not the dollar sign (20 and not $20.00).
 
 A few other items of information are also saved in the library project when a reward is distributed, such as,
 the name of the reward (which is saved in the study project configuration), and the record in the study project that is 
@@ -45,16 +45,29 @@ Unless a project opts out, there is a daily summary that is sent to the Alert Em
 dispersement for the previous day.  If more than one configuration is setup for a study project, one email will be sent summarizing all
 setups.
 
-# Setup
+# 
+
+# Gift Card Library Setup
 The gift card library project must have the following fields:
 ![LibraryProject](img/library_project.png)
 
-There is an xml and csv template which can be used in Github for the library project. The gift card information, 
+There is an xml and csv template in Github which <b>should</b> be used for the library project. The gift card information, 
 which is dispersed to participants, can be imported into the project from a csv file.
 
-The gift card project must enable the External Module.
-
 ![ExternalModule](img/external_module.png)
+
+The gift card library project supports sending participants the actual reward code so they can redeem the reward.  It also
+supports a link to a third party website where they can redeem the reward.  If the value entered in the 
+<i>[egift_number]</i> field starts with 'http', then the value of the field will be setup as a link in the email so
+participants can click on the link to retrieve their reward. When using links, the redemption of the reward is outside
+of Redcap so the status of the reward will stay at 'Reserved' and will not change to 'Claimed'.
+
+When the reward is a alphanumeric string, then Redcap will track when the user clicks on the link in the email and turns
+the status to 'Claimed'.
+
+If a gift card was erroneously sent out, the gift card record can be reset to 'Ready' and the record can be re-used. The
+gift card can only be redeemed with a valid token so if the token is deleted, that gift card can no longer be 'Claimed'.
+
 
 Once the module is enabled for the gift card project, the External Module configuration file must be filled out.
 ![ConfigurationFile](img/open_config.png)
@@ -68,8 +81,8 @@ gift card project configuration but the same library project must be used for ea
 
 ### Reward Configuration
 
-There may be many instances of this section if there are multiple rewards dispersed by this project.
-Each instance requires information about the specific reward. Among the required information are the reward logic, reward title and the
+There may be many configurations created if there are multiple rewards dispersed by this project.
+Each configuration requires information about the specific reward. Among the required information are the reward logic, reward title and the
 field which holds the email address of the participant.
 
 ### Notification Settings
@@ -108,8 +121,9 @@ displays the following data:
 
 ### Logic Checker
 
-The Logic Checker cron job will run at 9am each morning and look for the configurations who have the "Enable 9am cron job to check logic" checkbox enabled.
-Configurations should enable this cron logic checker only when they have a date component to their reward logic.  This cron will ensure the
+The Logic Checker cron job will run at 9am each morning and look for the configurations who have the "Enable 9am cron 
+job to check logic" checkbox enabled. Configurations should enable this cron logic checker only when they have a date 
+component to their reward logic.  This cron will ensure the
 reward is sent on the appropriate date even if the record is not saved on the day it is eligible.
 
 # Future Enhancements

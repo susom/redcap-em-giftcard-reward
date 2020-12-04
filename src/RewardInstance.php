@@ -132,9 +132,30 @@ class RewardInstance
         }
 
         // The email address does not need to be in the same event as the gift card fields so look for it.
+        // If this is a multi-arm project, make sure it is in only one event for this arm although it might be
+        // in every arm.
         $this->email_event_id = null;
         $email_form = $metaData[$this->email]['form_name'];
-        foreach ($this->Proj->eventsForms as $event_id => $form_list) {
+
+        $events_to_check = array();
+        if ($this->Proj->numArms > 1) {
+
+            // There is more than one arm so find the arm that the other fields are in
+            // and make sure that arm only has one email field
+            foreach($this->Proj->events as $arm => $info) {
+                $events_in_arm = array_keys($info['events']);
+                if (in_array($this->fk_event_id, $events_in_arm)) {
+                    $events_to_check = $events_in_arm;
+                }
+            }
+        } else {
+
+            $events_to_check = array_keys($this->Proj->eventsForms);
+        }
+
+        // Check through the events in this arm to make sure there is only one email field
+        foreach($events_to_check as $event_id) {
+            $form_list = $this->Proj->eventsForms[$event_id];
             if (in_array($email_form, $form_list)) {
                 if (is_null($this->email_event_id)) {
                     $this->email_event_id = $event_id;

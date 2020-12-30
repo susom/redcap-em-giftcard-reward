@@ -308,7 +308,7 @@ class RewardInstance
         $field_dd = REDCap::getDataDictionary($this->project_id, 'array', false, $this->brand_field);
 
         $options = array();
-        if (($field_dd[$this->brand_field]['field_type'] == 'radio') or ($field_dd[$this->brand_field]['element_type'] == 'select')) {
+        if (($field_dd[$this->brand_field]['field_type'] == 'radio') or ($field_dd[$this->brand_field]['field_type'] == 'dropdown')) {
 
             // Split the list of options from a string into arrays
             $selections = explode('|', $field_dd[$this->brand_field]['select_choices_or_calculations']);
@@ -320,7 +320,7 @@ class RewardInstance
                 $options[$key] = $value;
             }
         } else {
-            $this->module->emError("The field " . $this->brand_field . " needs to be a radio or dropdown field with list of brand names.");
+            $this->module->emError("The field " . $this->brand_field . " needs to be a dropdown or radio field with list of brand names.");
         }
         return $options;
     }

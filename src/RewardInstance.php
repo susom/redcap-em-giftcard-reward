@@ -615,11 +615,11 @@ class RewardInstance
         $emailTo = $this->email_address;
         $emailFrom = $this->email_from;
         $subject = $this->email_verification_subject;
-        $emailSubject = Piping::replaceVariablesInLabel($subject, $record_id, $this->fk_event_id, array(), false, null, false);
+        $emailSubject = Piping::replaceVariablesInLabel($subject, $record_id, $this->fk_event_id, array(), false, null, false, false);
 
         if (!empty($this->email_verification_header)) {
             $body = $this->email_verification_header . "<br>" . $bodyDescription;
-            $emailBody = Piping::replaceVariablesInLabel($body, $record_id, $this->fk_event_id, array(), false, null, false);
+            $emailBody = Piping::replaceVariablesInLabel($body, $record_id, $this->fk_event_id, array(), false, null, false, false);
         } else {
             $emailBody = $bodyDescription;
         }

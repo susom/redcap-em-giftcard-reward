@@ -62,7 +62,7 @@ if (!empty($_POST['action'])) {
             } catch (Exception $ex) {
                 $module->emError("Exception when verifying Gift Card library in verifyGiftCardRepo");
             }
-            list($resultProj,$messageProj) = $module->verifyConfigs( $gclPid, $gclEventID, $instances );
+            list($resultProj,$messageProj) = $module->verifyConfigs( $module->getProjectId(), $gclPid, $gclEventID, $instances );
 
             $result = true;
             $message = array();

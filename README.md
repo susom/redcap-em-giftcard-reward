@@ -41,11 +41,15 @@ A new feature to this module is the ability to evaluate the reward logic from a 
 the configuration setup, a cron job will run at 9am each day to evaluate gift card logic and determine if participants qualify for a reward.
 The use case for using a cron job is when logic is date dependent.
 
+Another way to send out gift cards is to batch process them.  When batch processing is enabled, records will not be evaluated
+for gift cards during a save.  Instead, an External Module webpage is provided to display which records are ready for gift cards
+and only those records selected on the webpage will be processed and sent a card.  Batch Processing can be used to rate limit 
+the number of cards that go out each day or it can provide extra time to ensure each record is valid before sending out rewards.
+
 Unless a project opts out, there is a daily summary that is sent to the Alert Email address which summarizes the status of the gift card
 dispersement for the previous day.  If more than one configuration is setup for a study project, one email will be sent summarizing all
 setups.
 
-# 
 
 # Gift Card Library Setup
 The gift card library project must have the following fields:
@@ -126,6 +130,12 @@ job to check logic" checkbox enabled. Configurations should enable this cron log
 component to their reward logic.  This cron will ensure the
 reward is sent on the appropriate date even if the record is not saved on the day it is eligible.
 
+### Batch Processing
+
+The Batch Processing webpage will display all records that are ready for a reward for each configuration that has 
+selected batch processing. The user will be able select the records that should receive the reward for each configuration.
+
+![Batch Processing](img/batch_processing.png)
+
 # Future Enhancements
     - Add the ability for projects to download a standard Gift Card Library Template automatically
-    - Add the ability to rate limit the number of cards that can be awarded per day

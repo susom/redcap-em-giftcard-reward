@@ -6,30 +6,32 @@ use \Project;
 use \REDCap;
 use \Exception;
 
+require_once "util/GiftCardUtils.php";
+require_once "emLock.php";
+
 class RewardInstance
 {
     /** @var \Stanford\GiftcardReward\GiftcardReward $module */
-    private $module, $project_id, $Proj;
 
     private $title, $logic, $fk_field, $fk_event_id, $gc_status, $amount,
         $email, $email_subject, $email_header, $email_verification,
         $email_verification_subject, $email_verification_header,
         $email_from, $email_address, $email_event_id, $alert_email,
         $cc_verification_email, $cc_reward_email, $cc_email,
-        $brand_field, $brand_name;
+        $brand_field, $brand_name, $project_id;
+    private $optout_low_balance, $low_balance_number, $allow_multiple_rewards;
+    private $gcr_pid, $gcr_event_id, $gcr_pk, $pid;
+    private $module, $emLock, $emLockScope;
 
-    private $optout_low_balance, $low_balance_number, $optout_daily_summary, $allow_multiple_rewards;
-
-    private $gcr_pid, $gcr_event_id, $gcr_pk;
-
-    public function __construct($module, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance)
+    public function __construct($module, $pid, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance)
     {
         // These are Gift Card project parameters
         global $Proj;
-        $this->Proj = $Proj;
-        $this->Proj->setRepeatingFormsEvents();
+
+        $Proj->setRepeatingFormsEvents();
         $this->module                       = $module;
-        $this->project_id                   = $module->getProjectId();
+        $this->project_id                   = $pid;
+        $this->module->emDebug("PID: " . $pid);
 
         // These are required gift card parameters in the gift card project
         $this->title                        = $instance['reward-title'];
@@ -66,6 +68,21 @@ class RewardInstance
         } catch (Exception $ex) {
             $this->module->emError("Exception caught initializing RewardInstance for project $this->project_id");
         }
+
+        // Retrieve the lock class that will put a database lock
+        try {
+            $this->emLock = new emLock();
+            $lock_status = $this->emLock->validate();
+            if ($lock_status) {
+                $this->emLockScope = 'GCLib' . $this->gcr_pid;
+            } else {
+                $this->module->emError("Can not setup locking system for DB Lock for project " . $this->project_id . ", GC Library project " . $this->gcr_pid);
+            }
+
+        } catch (Exception $ex) {
+            $this->module->emError("Exception caught initializing DB lock for project $this->project_id");
+        }
+
     }
 
     /**
@@ -97,6 +114,8 @@ class RewardInstance
      */
     public function verifyConfig() {
 
+        global $Proj;
+
         $message = '';
         $metaData = $this->module->getMetadata($this->project_id);
 
@@ -120,13 +139,13 @@ class RewardInstance
         $all_forms = array();
         $all_forms[0] = $metaData[$this->fk_field]['form_name'];
         $all_forms[1] = $metaData[$this->gc_status]['form_name'];
-        $diff = array_diff($all_forms, $this->Proj->eventsForms[$this->fk_event_id]);
+        $diff = array_diff($all_forms, $Proj->eventsForms[$this->fk_event_id]);
         if (!empty($diff)) {
             if (count($diff) == 1) {
-                $message .= "<li>The project fields are not all in the same event " . $this->Proj->eventInfo[$this->fk_event_id]['name'] .
+                $message .= "<li>The project fields are not all in the same event " . $Proj->eventInfo[$this->fk_event_id]['name'] .
                     ". The form " . json_encode(array_values($diff)) . " is not in this event.</li>";
             } else {
-                $message .= "<li>The project fields are not all in the same event " . $this->Proj->eventInfo[$this->fk_event_id]['name'] .
+                $message .= "<li>The project fields are not all in the same event " . $Proj->eventInfo[$this->fk_event_id]['name'] .
                     ". The forms " . json_encode(array_values($diff)) . " are not in this event.</li>";
             }
         }
@@ -138,11 +157,11 @@ class RewardInstance
         $email_form = $metaData[$this->email]['form_name'];
 
         $events_to_check = array();
-        if ($this->Proj->numArms > 1) {
+        if ($Proj->numArms > 1) {
 
             // There is more than one arm so find the arm that the other fields are in
             // and make sure that arm only has one email field
-            foreach($this->Proj->events as $arm => $info) {
+            foreach($Proj->events as $arm => $info) {
                 $events_in_arm = array_keys($info['events']);
                 if (in_array($this->fk_event_id, $events_in_arm)) {
                     $events_to_check = $events_in_arm;
@@ -150,12 +169,12 @@ class RewardInstance
             }
         } else {
 
-            $events_to_check = array_keys($this->Proj->eventsForms);
+            $events_to_check = array_keys($Proj->eventsForms);
         }
 
         // Check through the events in this arm to make sure there is only one email field
         foreach($events_to_check as $event_id) {
-            $form_list = $this->Proj->eventsForms[$event_id];
+            $form_list = $Proj->eventsForms[$event_id];
             if (in_array($email_form, $form_list)) {
                 if (is_null($this->email_event_id)) {
                     $this->email_event_id = $event_id;
@@ -164,15 +183,14 @@ class RewardInstance
                 }
             }
         }
-        $this->module->emDebug("email event id is $this->email_event_id");
 
         // There can only be one email field for each project so it cannot be located on a repeating form or in
         // a repeating event
-        if (!empty($this->Proj->RepeatingFormsEvents[$this->email_event_id])) {
-            if ($this->Proj->RepeatingFormsEvents[$this->email_event_id] == 'WHOLE' or
-                !is_null($this->Proj->RepeatingFormsEvents[$this->email_event_id][$email_form])) {
+        if (!empty($Proj->RepeatingFormsEvents[$this->email_event_id])) {
+            if ($Proj->RepeatingFormsEvents[$this->email_event_id] == 'WHOLE' or
+                !is_null($Proj->RepeatingFormsEvents[$this->email_event_id][$email_form])) {
                 $message .= "<li>Email address cannot be on a form that is repeating or in a repeating event.</li>";
-                $this->module->emDebug("Email address cannot be on a form that is repeating or in a repeating event.");
+                $this->module->emError("Email address cannot be on a form that is repeating or in a repeating event.");
             }
         }
 
@@ -189,7 +207,7 @@ class RewardInstance
         if (!empty($this->logic)) {
 
             // To check the logic, we need a record.  See if there is a record in the project
-            $data = REDCap::getData($this->project_id, 'array', null, array($this->Proj->table_pk), $this->fk_event_id);
+            $data = REDCap::getData($this->project_id, 'array', null, array($Proj->table_pk), $this->fk_event_id);
             $record = array_keys($data)[0];
             if (empty($record)) {
                 $this->module->emError("There are no records to test the gift card logic '" . $this->logic . "' for pid $this->project_id");
@@ -277,7 +295,7 @@ class RewardInstance
         }
 
         // Test the logic for this record
-        $this->module->emDebug("This is for record " . $record . ", with status = $status");
+        //$this->module->emDebug("This is for record " . $record . ", with status = $status");
         if (($record !== null) && ($status !== false)) {
             // If this config is filtering on brand, find out what Brand they want
             // The brand is a radio button or dropdown so we don't get misspelling.  We need to get the
@@ -289,7 +307,7 @@ class RewardInstance
             }
 
             $status = REDCap::evaluateLogic($this->logic, $this->project_id, $record);
-            $this->module->emDebug("Logic evaluated to '$status' for record $record for project $this->project_id - Logic: " . $this->logic);
+            //$this->module->emDebug("Logic evaluated to '$status' for record $record for project $this->project_id - Logic: " . $this->logic);
         }
 
         return $status;
@@ -302,7 +320,7 @@ class RewardInstance
      * @return array
      * @throws Exception
      */
-    function retrieveFieldOptions() {
+    private function retrieveFieldOptions() {
 
         // Split the selection list so we can determine which option is selected for our record
         $field_dd = REDCap::getDataDictionary($this->project_id, 'array', false, $this->brand_field);
@@ -326,11 +344,12 @@ class RewardInstance
     }
 
 
-
     /**
      * This record qualifies for a reward so process it.
      *
      * @param $record_id
+     * @param $sendNoGiftCardAlert - making an optional argument in case we are batch processing
+     *                               and don't want to send a flurry of emails
      * @return array
      */
     public function processReward($record_id) {
@@ -348,7 +367,9 @@ class RewardInstance
         }
 
         $gcr_required_fields = getGiftCardLibraryFields();
+
         // We found that this user is eligible for an gift card, so find the next award that fits our criteria
+        $this->emLock->lock($this->emLockScope);
         list($found, $reward_record) = $this->findNextAvailableReward($gcr_required_fields);
         if (!$found) {
 
@@ -366,6 +387,7 @@ class RewardInstance
             // There is a valid reward available so reserve it
             list($valid, $message) = $this->reserveReward($record_id, $reward_record);
         }
+        $this->emLock->release();
 
         return array($valid, $message);
     }
@@ -378,7 +400,7 @@ class RewardInstance
      */
     private function sendAlertEmailNoGiftCards($record_id) {
 
-        global $redcap_version, $module;
+        global $redcap_version;
 
         // Put together the URL to this redcap record so we can include it in the email.
         $recordUrl = APP_PATH_WEBROOT_FULL . "redcap_v{$redcap_version}/DataEntry/record_home.php?pid=$this->project_id&id=$record_id";
@@ -455,11 +477,9 @@ class RewardInstance
             $filter .= " and [brand] = '" . $this->brand_name . "'";
         }
 
-        $this->module->emDebug("this is the brand in retrieveGiftCardRewardsList: " . $this->brand_name);
-        $this->module->emDebug("Filter: " . $filter);
+        //$this->module->emDebug("Filter: " . $filter);
         $data = REDCap::getData($this->gcr_pid, 'array', null, $gcr_required_fields, $this->gcr_event_id,
             null, null, null, null, $filter);
-        $this->module->emDebug("Records: " . json_encode($data));
         return $data;
     }
 
@@ -481,12 +501,11 @@ class RewardInstance
         // is checked that allows an email to receive multiple rewards.
         if (REDCap::isLongitudinal()) {
             $event_names = REDCap::getEventNames(true, false);
-            $this->module->emDebug("(true, false)Event names for record $record_id: " . json_encode($event_names));
+            //$this->module->emDebug("(true, false)Event names for record $record_id: " . json_encode($event_names));
 
             $projFilter = "[" . $event_names[$this->email_event_id] . "][" . $this->email . "] = '" . $this->email_address . "'" .
                 " and (([" . $event_names[$this->fk_event_id] . "][". $this->gc_status . "] = 'Reserved')" .
                 " or ([" . $event_names[$this->fk_event_id] . "][" . $this->gc_status . "] = 'Claimed'))";
-            $this->module->emDebug("Project Filter: " . $projFilter);
         } else {
             $projFilter = "[" . $this->email . "] = '" . $this->email_address . "'" .
                 " and (([". $this->gc_status . "] = 'Reserved')" .
@@ -556,7 +575,6 @@ class RewardInstance
 
         // Send the verification email to the recipient
         $status = $this->sendEmailWithLinkToReward($record_id, $bodyDescription);
-        $this->module->emDebug("This is the status '$status' from sendingEmail for record $record_id");
         if ($status) {
 
             // If the email was successfully sent, update the Gift Card Library to reserve this reward
@@ -630,8 +648,7 @@ class RewardInstance
             $cc_email = $this->cc_email;
         }
         $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody, $cc_email);
-        $this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody, CC: $cc_email");
-
+        //$this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody, CC: $cc_email");
 
         return $status;
     }
@@ -657,131 +674,9 @@ class RewardInstance
         $hash = null;
         while(is_null($hash) || in_array($hash, $hashList)) {
             $hash = generateRandomHash(15, false, false, false);
-            $this->module->emDebug("For record $record_id, new random hash: " . $hash);
         }
 
         return $hash;
-    }
-
-    /**
-     * This function is called from the nightly cron for each gift card configuration that has not opted-out of receiving it.
-     * The gift card library will be checked for the following:
-     *          1) how many gift card rewards were sent in email yesterday
-     *          2) How many gift card rewards were viewed(claimed) yesterday
-     *          3) How many gift cards were sent > 7 days ago and have not been viewed
-     *          4) How many gift cards were sent < 7 days ago and have not been viewed
-     *          5) How many gift cards are still Ready to be awarded
-     *          6) How many gift cards in total have been awarded
-     *
-     * @return array
-     */
-    public function retrieveSummaryData() {
-
-        $rewards_sent_yesterday = 0;
-        $rewards_claimed_yesterday = 0;
-        $num_gc_sent_more_than_7days_ago = 0;
-        $num_gc_send_less_than_7days_ago = 0;
-        $num_gc_notready = 0;
-        $num_gc_available = 0;
-        $num_gc_awarded = 0;
-        $num_gc_claimed = 0;
-        $today = strtotime(date('Y-m-d'));
-
-        // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount) and title
-        $filter = "[amount] = '" . $this->amount . "'";
-
-        $data = REDCap::getData($this->gcr_pid, 'array', null, null, $this->gcr_event_id, null, null, null, null, $filter);
-        if (!empty($data)) {
-            $brand_type = array();
-            foreach ($data as $record_id => $event_info) {
-                foreach ($event_info as $event_id => $record) {
-
-                    $status = $record['status'];
-                    if ($record['reward_name'] == $this->title) {
-                        // Convert timestamps so we can do date math
-                        $datetime_sent = strtotime(date($record['reserved_ts']));
-                        $date_sent = strtotime(date("Y-m-d", $datetime_sent));
-
-                        if ($record['claimed_ts'] !== '') {
-                            $datetime_claimed = strtotime(date($record['claimed_ts']));
-                            $date_claimed = strtotime(date("Y-m-d", $datetime_claimed));
-                        } else {
-                            $date_claimed = '';
-                        }
-
-                        $num_days_sent = intval(($today - $date_sent) / 86400);
-                        if ($date_claimed != '') {
-                            $num_days_claimed = intval(($today - $date_claimed) / 86400);
-                        } else {
-                            $num_days_claimed = 0;
-                        }
-
-                        // Num of gift cards sent yesterday
-                        if (($num_days_sent == 1) && (!empty($record['reserved_ts']))) {
-                            $rewards_sent_yesterday++;
-                        }
-
-                        // Num of gift cards claimed yesterday
-                        if (($num_days_claimed == 1) && ($status == 3)) {
-                            $rewards_claimed_yesterday++;
-                        }
-
-                        // Num of gift cards sent > 7 days ago and have not been viewed
-                        if (($num_days_sent > 7) && ($status == 2)) {
-                            $num_gc_sent_more_than_7days_ago++;
-                        }
-
-                        // Num of gift cards sent < 7 days ago and have not been viewed
-                        if (($num_days_sent <= 7) && ($status == 2)) {
-                            $num_gc_send_less_than_7days_ago++;
-                        }
-
-                        // Num of gift cards in total have been awarded
-                        if (($status == 2) || ($status == 3)) {
-                            $num_gc_awarded++;
-                        }
-
-                        // Num of gift cards in total have been claimed
-                        if ($status == 3) {
-                            $num_gc_claimed++;
-                        }
-                    }
-
-                    // Num of gift cards with NOT Ready status (value of 0)
-                    if ($status == 0) {
-                        $num_gc_notready++;
-                    }
-
-                    // Num of gift cards with Ready status (value of 1 means Ready)
-                    if ($status == 1) {
-                        $brand = $record['brand'];
-                        $num_gc_available++;
-                        if (empty($brand_type[$brand])) {
-                            $brand_type[$brand] = 1;
-                        } else {
-                            $brand_type[$brand]++;
-                        }
-                    }
-                }
-            }
-
-        } else {
-            $this->module->emError("No data was found for DailySummary from gc library [pid:$this->gcr_pid/event id:$this->gcr_event_id]");
-        }
-
-        $results = array(
-            "sent_yesterday"        => $rewards_sent_yesterday,
-            "claimed_yesterday"     => $rewards_claimed_yesterday,
-            "sent_gt7days_ago"      => $num_gc_sent_more_than_7days_ago,
-            "sent_lt7days_ago"      => $num_gc_send_less_than_7days_ago,
-            "not_ready"             => $num_gc_notready,
-            "num_available"         => $num_gc_available,
-            "num_awarded"           => $num_gc_awarded,
-            "num_claimed"           => $num_gc_claimed,
-            "brand"                 => $brand_type
-        );
-
-        return $results;
     }
 
     /**
@@ -794,9 +689,6 @@ class RewardInstance
      * @return bool - true/false if email was successfully sent
      */
     private function sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody, $ccEmail=null) {
-
-        $this->module->emDebug("In sendEmail: To " . $emailTo . ", and From " . $emailFrom . ", email Subject " . "$emailSubject" .
-            " email Body: " . $emailBody . ", cc_email: " . $ccEmail);
 
         $status = REDCap::email($emailTo, $emailFrom, $emailSubject, $emailBody, $ccEmail);
         if (!$status) {
@@ -812,6 +704,5 @@ class RewardInstance
 
         return $status;
     }
-
 
 }

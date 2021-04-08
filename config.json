@@ -31,6 +31,11 @@
     "control-center": [
     ],
     "project": [
+      {
+        "name": "Gift Cards: Batch Processing",
+        "icon": "gear",
+        "url": "src/GiftCardBatchProcessing.php"
+      }
     ]
   },
 
@@ -152,6 +157,18 @@
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Brand</span></h6>Select the field that holds the brand that will be used for filtering gift cards. If empty, brand filtering is not performed.",
           "required": false,
           "type": "field-list"
+        },
+        {
+          "key": "batch-processing",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Batch Processing</span></h6>Check this checkbox for batch processing.  No gift cards will automatically be sent but a list is provided so you can select the ones you want to send.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "display-field-list",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Fields to Display for Batch Processing</span></h6>Comma separately list of fields to display when selecting gift cards to send during batch processing. The fields must reside in this configuration event.",
+          "required": false,
+          "type": "text"
         },
         {
           "key": "reward-email",

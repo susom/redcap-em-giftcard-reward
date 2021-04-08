@@ -29,6 +29,10 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
     use emLoggerTrait;
 
+    public function __construct() {
+        parent::__construct();
+    }
+
     /******************************************************************************************************************/
     /* HOOK METHODS                                                                                                   */
     /******************************************************************************************************************/
@@ -57,8 +61,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $instances = $this->getSubSettings('rewards');
 
         // Next check the Gift Card Project to see if it is valid
-        $this->emDebug("In redcap_module_save_configuration ");
-        list($validConfig, $mesageConfig) = $this->verifyConfigs($gcr_pid, $gcr_event_id, $instances);
+        list($validConfig, $mesageConfig) = $this->verifyConfigs($project_id, $gcr_pid, $gcr_event_id, $instances);
         if (!$validConfig) {
             $this->emError($mesageConfig);
         }
@@ -90,44 +93,50 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $alert_email = $this->getProjectSetting("alert-email");
         $cc_email = $this->getProjectSetting("cc-email");
         $configs = $this->getSubSettings("rewards");
-        $this->emDebug("Configs for project $project_id: " . json_encode($configs));
 
         foreach ($configs as $config => $config_info) {
 
-            // Create a reward instance so we can process this record
-            try {
-                $reward = new RewardInstance($this, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
-            } catch (Exception $ex) {
-                $this->emError("Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage());
-                return;
-            }
+            // Check to see if this config should only be processed during batch processing.
+            // If so, skip processing now.
+            $batch_processing = $config_info['batch-processing'];
+            if (empty($batch_processing)) {
 
-            // Once the reward instance is created, check to see if this record should receive an award.  If so, send it.
-            $status = $reward->verifyConfig();
-            if ($status) {
-                $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record" . ", " . json_encode($config_info));
+                // Create a reward instance so we can process this record
+                try {
+                    $reward = new RewardInstance($this, $project_id, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
+                } catch (Exception $ex) {
+                    $this->emDebug("Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage());
+                    return;
+                }
 
-                $eligible = $reward->checkRewardStatus($record);
-                if ($eligible) {
-                    $message = "[PID:". $project_id . "] - record $record is eligible for " . $config_info["reward-title"] . " reward.";
-                    $this->emDebug($message);
-                    list($rewardSent, $message) = $reward->processReward($record);
+                // Once the reward instance is created, check to see if this record should receive an award.  If so, send it.
+                $status = $reward->verifyConfig();
+                if ($status) {
+                    $this->emDebug("Looking at config " . $config_info["reward-title"] . " for record $record");
 
-                    if ($rewardSent) {
-                        $message = "Finished processing reward for [$project_id] record $record for " . $config_info["reward-title"] . " reward.";
-                        $this->emLog($message);
-                    } else {
-                        $message .= "<br>ERROR: Reward for [PID:$project_id] record $record for " . $config_info["reward-title"] . " reward was not processed.";
-                        $this->emError($message);
+                    $eligible = $reward->checkRewardStatus($record);
+                    if ($eligible) {
+                        $message = "[PID:" . $project_id . "] - record $record is eligible for " . $config_info["reward-title"] . " reward.";
+                        $this->emDebug($message);
+                        list($rewardSent, $message) = $reward->processReward($record);
+
+                        if ($rewardSent) {
+                            $message = "Finished processing reward for [$project_id] record $record for " . $config_info["reward-title"] . " reward.";
+                            $this->emLog($message);
+                        } else {
+                            $message .= "<br>ERROR: Reward for [PID:$project_id] record $record for " . $config_info["reward-title"] . " reward was not processed.";
+                            $this->emError($message);
+                        }
                     }
+                } else {
+                    $message = "[PID:" . $project_id . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate for records!";
+                    $this->emError($message);
                 }
             } else {
-                $message = "[PID:" . $project_id . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate for records!";
-                $this->emError($message);
+                //$this->emDebug("Batch processing reward " . $config_info["reward-title"] . ' so skipping processing');
             }
         }
     }
-
 
     /******************************************************************************************************************/
     /* METHODS                                                                                                       */
@@ -175,19 +184,18 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * @param null $cc_email = Email address to cc if setup in the configuration
      * @return array with overall status and an array of errors
      */
-    public function verifyConfigs($gcr_pid, $gcr_event_id, $instances, $alert_email=null, $cc_email=null) {
+    public function verifyConfigs($project_id, $gcr_pid, $gcr_event_id, $instances, $alert_email=null, $cc_email=null) {
 
         $errors = array();
         $overallStatus = true;
         if (is_null($alert_email)) $alert_email = $this->getProjectSetting("alert-email");
         if (is_null($cc_email)) $cc_email = $this->getProjectSetting("cc-email");
-        $this->emDebug("In verifyConfigs - alert email: " . $alert_email . ", and cc email: " . $cc_email);
+        //$this->emDebug("In verifyConfigs - alert email: " . $alert_email . ", and cc email: " . $cc_email);
 
         foreach ($instances as $i => $instance) {
 
             // Create a new reward instance and verify the config
-            $this->emDebug("Configuration " . ($i+1) . " is: " . json_encode($instance));
-            $ri = new RewardInstance($this, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
+            $ri = new RewardInstance($this, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
 
             list($result,$message) = $ri->verifyConfig();
             if ($result === false) {
@@ -234,7 +242,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      */
     public function giftCardLogicCheck() {
 
-        $this->emDebug("In giftCardLogicCheck");
         // Find all the projects that are using the Gift Card Rewards EM
         $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 

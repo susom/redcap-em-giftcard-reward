@@ -1,0 +1,25 @@
+
+h3, h4 {
+    color: grey;
+}
+
+.config {
+    color:darkgoldenrod;
+}
+
+a {
+    font-size: 14px;
+}
+
+.reclist {
+    padding-left: 50px;
+}
+
+table {
+    margin-top: 30px;
+    width: 70%;
+}
+
+td, th {
+    text-align: left;
+}

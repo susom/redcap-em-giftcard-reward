@@ -65,8 +65,6 @@ class BatchProcessingInstance
 
     private function formatRecordsToHtml($records) {
 
-        global $module;
-
         // If there are no records to display for this config, skip it.
         if (empty($records)) {
             return null;

@@ -2,13 +2,13 @@
 namespace Stanford\GiftcardReward;
 /** @var \Stanford\GiftcardReward\GiftcardReward $module */
 
-require_once $module->getModulePath() .  "util/GiftCardUtils.php";
+require_once $module->getModulePath() .  "src/VerifyLibraryClass.php";
 
 use Exception;
 use REDCap;
+use Project;
 
-$pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
-$module->emDebug("In DailySummary for project_id $pid");
+$pid = $module->getProjectId();
 
 /*
  * We are called through an API call from the function giftCardCron in GiftcardReward.php.  giftCardCron runs daily
@@ -35,8 +35,16 @@ $alert_email = $module->getProjectSetting("alert-email");
 $configs = $module->getSubSettings("rewards");
 
 try {
+
+    // Check to see if the event id is set
+    $gcr_proj = new Project($gcr_pid);
+    $gcr_proj->setRepeatingFormsEvents();
+    $gcr_event_id = $module->checkGiftCardLibEventId($gcr_proj, $gcr_event_id);
+
     // First make sure the Library is valid (this is the same repo for all configurations)
-    list($valid, $message) = verifyGiftCardRepo($gcr_pid, $gcr_event_id);
+    $gclib = new VerifyLibraryClass($gcr_pid, $gcr_event_id);
+    [$valid, $message] = $gclib->verifyLibraryConfig();
+
     if (!$valid) {
         $module->emError($message);
         return;

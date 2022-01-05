@@ -2,12 +2,12 @@
 namespace Stanford\GiftcardReward;
 
 use Piping;
-use \Project;
-use \REDCap;
-use \Exception;
+use Project;
+use REDCap;
+use Exception;
 
-require_once "util/GiftCardUtils.php";
 require_once "emLock.php";
+require_once "src/VerifyLibraryClass.php";
 
 class RewardInstance
 {
@@ -18,20 +18,20 @@ class RewardInstance
         $email_verification_subject, $email_verification_header,
         $email_from, $email_address, $email_event_id, $alert_email,
         $cc_verification_email, $cc_reward_email, $cc_email,
-        $brand_field, $brand_name, $project_id;
+        $brand_field, $brand_name, $project_id, $brand_options;
     private $optout_low_balance, $low_balance_number, $allow_multiple_rewards;
     private $gcr_pid, $gcr_event_id, $gcr_pk, $pid;
     private $module, $emLock, $emLockScope;
+    private $gcr_proj;
+    private $gcr_required_fields;
 
     public function __construct($module, $pid, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance)
     {
-        // These are Gift Card project parameters
         global $Proj;
 
         $Proj->setRepeatingFormsEvents();
         $this->module                       = $module;
         $this->project_id                   = $pid;
-        $this->module->emDebug("PID: " . $pid);
 
         // These are required gift card parameters in the gift card project
         $this->title                        = $instance['reward-title'];
@@ -60,15 +60,6 @@ class RewardInstance
         $this->low_balance_number           = $instance['low-balance-number'];
         $this->allow_multiple_rewards       = $instance['allow-multiple-rewards'];
 
-        // There are gift card library parameters
-        $this->gcr_pid = $gcr_pid;
-        $this->gcr_event_id = $gcr_event_id;
-        try {
-            $this->getGiftCardLibraryParams();
-        } catch (Exception $ex) {
-            $this->module->emError("Exception caught initializing RewardInstance for project $this->project_id");
-        }
-
         // Retrieve the lock class that will put a database lock
         try {
             $this->emLock = new emLock();
@@ -79,33 +70,29 @@ class RewardInstance
                 $this->module->emError("Can not setup locking system for DB Lock for project " . $this->project_id . ", GC Library project " . $this->gcr_pid);
             }
 
+            // Retrieve data dictionary of library project
+            $this->gcr_pid = $gcr_pid;
+            $this->gcr_proj = new Project($this->gcr_pid);
+            $this->gcr_proj->setRepeatingFormsEvents();
+            $this->gcr_pk = $this->gcr_proj->table_pk;
+
+            // Check to see if the event id is set
+            $this->gcr_event_id = $module->checkGiftCardLibEventId($this->gcr_proj, $gcr_event_id);
+
+            // Retrieve the gift card library required fields
+            $this->gcr_required_fields = $module->getGiftCardLibraryFields();
+
+            // Retrieve the brand options if the brand option is selected.
+            if ($this->brand_field != '') {
+                $this->retrieveFieldOptions();
+            }
+
         } catch (Exception $ex) {
-            $this->module->emError("Exception caught initializing DB lock for project $this->project_id");
+            $this->module->emError("Exception caught initializing Reward Instance for project $this->project_id, with error: " . json_encode($ex));
         }
 
     }
 
-    /**
-     * Retrieve any info we need about the Gift Card Library here.  Right now, if an event id is not
-     * specified in the config file, retrieve it.  Also, store the primary key for later use.
-     *
-     * @throws \Exception
-     */
-    private function getGiftCardLibraryParams() {
-
-        $gcr_proj = new Project($this->gcr_pid);
-        $gcr_proj->setRepeatingFormsEvents();
-
-        // Make sure we have an event_id in the gift card rewards project
-        if (!isset($this->gcr_event_id) && ($gcr_proj->numEvents === 1)) {
-            // If this project has only 1 event id and it wasn't specified, then set it.
-            $this->gcr_event_id = array_keys($gcr_proj->eventInfo)[0];
-        } else if (!isset($this->gcr_event_id)) {
-            $this->module->emError("Gift Card Libary has more than 1 event - select one through the External Module Configuration");
-        }
-
-        $this->gcr_pk = $gcr_proj->table_pk;
-    }
 
     /**
      * Verify the gift card project configuration and return an array of ($result, $message)
@@ -202,6 +189,10 @@ class RewardInstance
             }
         }
 
+        // Check to make sure there are brand options if the brand option is selected.
+        if ($this->brand_field != '' and empty($this->brand_options)) {
+            $message .= "<li>Cannot filter on brands because there are no options specified for field " . $this->brand_field . " </li>";
+        }
 
         // Now check the logic which will determine when to send a gift card -- make sure it is valid
         if (!empty($this->logic)) {
@@ -223,9 +214,9 @@ class RewardInstance
         }
 
         if (empty($message)) {
-            return array(true, null);
+            return [true, null];
         } else {
-            return array(false, $message);
+            return [false, $message];
         }
     }
 
@@ -252,6 +243,7 @@ class RewardInstance
 
         return $message;
     }
+
 
     /**
      * This function checks the logic which determines when it is time to send a reward.  If a record is not
@@ -295,19 +287,16 @@ class RewardInstance
         }
 
         // Test the logic for this record
-        //$this->module->emDebug("This is for record " . $record . ", with status = $status");
         if (($record !== null) && ($status !== false)) {
             // If this config is filtering on brand, find out what Brand they want
             // The brand is a radio button or dropdown so we don't get misspelling.  We need to get the
             // data dictionary to find out the actual brand.
             if ($this->brand_field != '') {
-                $options = $this->retrieveFieldOptions();
                 $brand_option = $thisRecord[$this->brand_field];
-                $this->brand_name = $options[$brand_option];
+                $this->brand_name = $this->brand_options[$brand_option];
             }
 
             $status = REDCap::evaluateLogic($this->logic, $this->project_id, $record);
-            //$this->module->emDebug("Logic evaluated to '$status' for record $record for project $this->project_id - Logic: " . $this->logic);
         }
 
         return $status;
@@ -317,7 +306,6 @@ class RewardInstance
      * This function finds the options for a radio button field. Specifically the brand names should be
      * listed in this field so as to avoid data entry errors.
      *
-     * @return array
      * @throws Exception
      */
     private function retrieveFieldOptions() {
@@ -325,7 +313,7 @@ class RewardInstance
         // Split the selection list so we can determine which option is selected for our record
         $field_dd = REDCap::getDataDictionary($this->project_id, 'array', false, $this->brand_field);
 
-        $options = array();
+        $this->brand_options = array();
         if (($field_dd[$this->brand_field]['field_type'] == 'radio') or ($field_dd[$this->brand_field]['field_type'] == 'dropdown')) {
 
             // Split the list of options from a string into arrays
@@ -335,12 +323,11 @@ class RewardInstance
                 $split = explode(',', $selection);
                 $key = trim($split[0]);
                 $value = trim($split[1]);
-                $options[$key] = $value;
+                $this->brand_options[$key] = $value;
             }
         } else {
             $this->module->emError("The field " . $this->brand_field . " needs to be a dropdown or radio field with list of brand names.");
         }
-        return $options;
     }
 
 
@@ -359,18 +346,17 @@ class RewardInstance
 
         // Check to see if this participant has already been rewarded a gift card. If so, don't
         // send another one unless the configuation checkbox was selected that it is okay to send.
-        list($valid, $message) = $this->checkForPreviousReward($record_id);
+        [$valid, $message] = $this->checkForPreviousReward($record_id);
         if (!$valid) {
 
+            $this->module->emDebug("Already sent to record $record_id");
             // Even though it is not valid to send a reward, we are successfully done processing
-            return array(true, $message);
+            return [true, $message];
         }
-
-        $gcr_required_fields = getGiftCardLibraryFields();
 
         // We found that this user is eligible for an gift card, so find the next award that fits our criteria
         $this->emLock->lock($this->emLockScope);
-        list($found, $reward_record) = $this->findNextAvailableReward($gcr_required_fields);
+        [$found, $reward_record] = $this->findNextAvailableReward();
         if (!$found) {
 
             // We were not able to find a reward that meets our criteria.
@@ -385,11 +371,11 @@ class RewardInstance
         } else {
 
             // There is a valid reward available so reserve it
-            list($valid, $message) = $this->reserveReward($record_id, $reward_record);
+            [$valid, $message] = $this->reserveReward($record_id, $reward_record);
         }
         $this->emLock->release();
 
-        return array($valid, $message);
+        return [$valid, $message];
     }
 
     /**
@@ -427,15 +413,14 @@ class RewardInstance
     /**
      * This function finds the first available reward record from the library
      *
-     * @param $gcr_required_fields
      * @return array -
      *          1) true/false - was reward record found
      *          2) if true, reward record otherwise null
      */
-    private function findNextAvailableReward($gcr_required_fields) {
+    private function findNextAvailableReward() {
 
         // Retrieve all available gift cards for this reward
-        $data = $this->retrieveGiftCardRewardsList($gcr_required_fields);
+        $data = $this->retrieveGiftCardRewardsList();
 
         // Check to see if there was threshold limit entered and if so, are we below it. If there are no rewards available,
         // we will be sending them email about this participant so don't send another email here.
@@ -449,11 +434,11 @@ class RewardInstance
         }
 
         if (empty($data)) {
-            return array(false, "No Reward Found");
+            return [false, "No Reward Found"];
         } else {
             // We already know that this is not a repeating form/event
             $next_record_id = min(array_keys($data));
-            return array(true, $data[$next_record_id][$this->gcr_event_id]);
+            return [true, $data[$next_record_id][$this->gcr_event_id]];
         }
     }
 
@@ -461,11 +446,10 @@ class RewardInstance
      * This function will retrieve all rewards record which haven't been previously claimed and
      * match the dollar amount that was specified in the configuration if specified.
      *
-     * @param $gcr_required_fields
      * @return null if no records were found
      *              array of records which fits our criteria
      */
-    private function retrieveGiftCardRewardsList($gcr_required_fields) {
+    private function retrieveGiftCardRewardsList() {
 
         // Look for the next available gift card record which meets our requirements
         $filter = "[status] = '1' and [reserved_ts] = '' and [claimed_ts] = ''";
@@ -477,8 +461,7 @@ class RewardInstance
             $filter .= " and [brand] = '" . $this->brand_name . "'";
         }
 
-        //$this->module->emDebug("Filter: " . $filter);
-        $data = REDCap::getData($this->gcr_pid, 'array', null, $gcr_required_fields, $this->gcr_event_id,
+        $data = REDCap::getData($this->gcr_pid, 'array', null, $this->gcr_required_fields, $this->gcr_event_id,
             null, null, null, null, $filter);
         return $data;
     }
@@ -501,7 +484,6 @@ class RewardInstance
         // is checked that allows an email to receive multiple rewards.
         if (REDCap::isLongitudinal()) {
             $event_names = REDCap::getEventNames(true, false);
-            //$this->module->emDebug("(true, false)Event names for record $record_id: " . json_encode($event_names));
 
             $projFilter = "[" . $event_names[$this->email_event_id] . "][" . $this->email . "] = '" . $this->email_address . "'" .
                 " and (([" . $event_names[$this->fk_event_id] . "][". $this->gc_status . "] = 'Reserved')" .
@@ -530,11 +512,11 @@ class RewardInstance
                     $this->module->emError($status);
                 }
 
-                return array(false, $message);
+                return [false, $message];
             }
         }
 
-        return (array(true, null));
+        return [true, null];
     }
 
     /**
@@ -562,7 +544,7 @@ class RewardInstance
         } else {
 
             // Create a unique hash for this reward (record/reward)
-            $hash = $this->createRewardHash($record_id);
+            $hash = $this->createRewardHash();
 
             // Create the URL for this reward. Add on the project and hash
             $url = $this->module->getUrl("src/DisplayReward.php", true, true);
@@ -615,9 +597,9 @@ class RewardInstance
         }
 
         if ($message === '') {
-            return array(true, null);
+            return [true, null];
         } else {
-            return array(false, $message);
+            return [false, $message];
         }
     }
 
@@ -648,35 +630,19 @@ class RewardInstance
             $cc_email = $this->cc_email;
         }
         $status = $this->sendEmail($emailTo, $emailFrom, $emailSubject, $emailBody, $cc_email);
-        //$this->module->emDebug("Notification Email - To: $emailTo, From: $emailFrom, Subject: $emailSubject, Body: $emailBody, CC: $cc_email");
 
         return $status;
     }
 
     /**
-     * This function will generate an unique hash for each reward. Each hash has 15 characters.
+     * This function will generate an unique hash for each reward. Each hash has 15 characters plus the UNIX time in seconds appended.
      *
-     * @param $record_id
      * @return string - newly created unique 15 character hash
      */
-    private function createRewardHash($record_id) {
+    private function createRewardHash() {
 
-        $hashList = array();
-
-        // Retrieve the current hashes so we can make sure this newly generated one is unique
-        $recordHashes = REDCap::getData($this->gcr_pid, 'array', null, array('reward_hash'), $this->gcr_event_id);
-        foreach ($recordHashes as $record => $event) {
-            foreach($event[$this->gcr_event_id] as $fieldname => $recordHash) {
-                $hashList[] = $recordHash;
-            }
-        }
-
-        $hash = null;
-        while(is_null($hash) || in_array($hash, $hashList)) {
-            $hash = generateRandomHash(15, false, false, false);
-        }
-
-        return $hash;
+        $hash = generateRandomHash(15, false, false, false);
+        return $hash . time();
     }
 
     /**

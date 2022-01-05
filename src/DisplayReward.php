@@ -7,10 +7,10 @@ use REDCap;
 use Project;
 use Exception;
 
-$gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? $_GET['reward_token'] : null;
-$pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
-$action = isset($_GET['action']) && !empty($_GET['action']) ? $_GET['action'] : null;
-$emailAddr = isset($_GET['e_addr']) && !empty($_GET['e_addr']) ? $_GET['e_addr'] : null;
+$gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? filter_var($_GET['reward_token'], FILTER_SANITIZE_STRING) : null;
+$pid = isset($_GET['pid']) && !empty($_GET['pid']) ? filter_var($_GET['pid'], FILTER_SANITIZE_NUMBER_INT) : null;
+$action = isset($_GET['action']) && !empty($_GET['action']) ? filter_var($_GET['action'], FILTER_SANITIZE_STRING) : null;
+$emailAddr = isset($_GET['e_addr']) && !empty($_GET['e_addr']) ? filter_var($_GET['e_addr'], FILTER_SANITIZE_EMAIL) : null;
 $claimed = "Claimed";
 
 $module->emDebug("Token: " . $gcToken . ", pid: " . $pid . ", action: " . $action . ", email addr: " . $emailAddr);
@@ -304,9 +304,8 @@ function findGiftCardLibraryRecord($pid, $gcrPid, $gcToken) {
 
     // Find the gift card library record with the token (hash)
     $filter = "[reward_hash]='" . $gcToken . "' and [reward_pid]='" . $pid . "'";
-    $module->emDebug("Filter for gc library: " . $filter);
     $gclData = REDCap::getData($gcrPid, 'array', null, null, $gclEventId, null, null, null, null, $filter);
-    $module->emDebug("Reward library data: " . json_encode($gclData));
+
     if (empty($gclData)) {
         $module->emError("Could not find record with token $gcToken in project $gcrPid");
     } else {

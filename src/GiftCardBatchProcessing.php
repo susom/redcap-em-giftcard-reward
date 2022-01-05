@@ -8,12 +8,11 @@ use \Exception;
 use \REDCap;
 use \UserRights;
 
-$pid     = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
-$action  = isset($_POST['action']) && !empty($_POST['action']) ? $_POST['action'] : null;
-$records = isset($_POST['records']) && !empty($_POST['records']) ? $_POST['records'] : null;
+$pid     = isset($_GET['pid']) && !empty($_GET['pid']) ? filter_var($_GET['pid'], FILTER_SANITIZE_NUMBER_INT) : null;
+$action  = isset($_POST['action']) && !empty($_POST['action']) ? filter_var($_POST['action'], FILTER_SANITIZE_STRING) : null;
+$records = isset($_POST['records']) && !empty($_POST['records']) ? filter_var($_POST['records'], FILTER_SANITIZE_STRING) : null;
 
 $stylesheet = $module->getUrl('config/batch.css');
-
 
 // Retrieve all the gift card configurations for this project
 $configs = $module->getSubSettings("rewards");
@@ -27,7 +26,7 @@ if ($action == "process") {
     $cc_email = $module->getProjectSetting("cc-email");
 
     // Save each record so the gift cards will be processed
-    $post_values = $_POST;
+    $post_values = filter_var_array($_POST, FILTER_SANITIZE_STRING);
     unset($post_values['action']);
     foreach($post_values as $config => $records) {
 

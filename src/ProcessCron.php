@@ -5,8 +5,6 @@ namespace Stanford\GiftcardReward;
 use REDCap;
 use Exception;
 
-require_once ($module->getModulePath() . "util/GiftCardUtils.php");
-
 /**
  *  When Gift Card configurations use Cron processing, the Cron job must call each project through an API because the processing needs to be done
  *  in project context.
@@ -19,7 +17,7 @@ require_once ($module->getModulePath() . "util/GiftCardUtils.php");
  */
 
 
-$pid = isset($_GET['pid']) && !empty($_GET['pid']) ? $_GET['pid'] : null;
+$pid = $module->getProjectId();
 
 // Retrieve the gift card configurations for this project id
 $gc_pid = $module->getProjectSetting("gcr-pid");
@@ -46,6 +44,7 @@ foreach($configs as $config_num => $config_info) {
                 $module->emError($message);
                 return;
             }
+
         } catch (Exception $ex) {
             $module->emError("Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage());
             return;
@@ -66,7 +65,7 @@ foreach($configs as $config_num => $config_info) {
                 // This record is eligible for a reward. Process the reward.
                 $message = "[PID:". $pid . "] - record $record_id is eligible for " . $config_info["reward-title"] . " reward.";
                 $module->emDebug($message);
-                list($rewardSent, $message) = $reward->processReward($record_id);
+                [$rewardSent, $message] = $reward->processReward($record_id);
 
                 // If the reward was successfully sent, log it, otherwise, log an error because we weren't able to send a reward.
                 if ($rewardSent) {

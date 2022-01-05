@@ -5,7 +5,6 @@ namespace Stanford\GiftcardReward;
 use \MetaData;
 use \ZipArchive;
 
-//require_once APP_PATH_DOCROOT . 'Design/functions.php';
 
 /**
  * Class InsertInstrumentHelper

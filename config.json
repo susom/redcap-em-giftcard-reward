@@ -6,8 +6,16 @@
   "description": "Automate the email of giftcards to eligible recipients",
 
   "versions": [
-    { "0.1": "Initial" }
+    { "1.0.0": "Initial",
+      "1.0.1": "Add framework-version" }
   ],
+
+  "compatibility": {
+    "php-version-min": "",
+    "php-version-max": "",
+    "redcap-version-min": "",
+    "redcap-version-max": ""
+  },
 
   "authors": [
     {
@@ -21,6 +29,8 @@
       "institution": "Stanford Health Care"
     }
   ],
+
+  "framework-version": 8,
 
   "permissions": [
     "redcap_save_record",

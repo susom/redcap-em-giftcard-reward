@@ -22,10 +22,10 @@ if (!empty($_POST['action'])) {
             break;
         case "getStatus":
 
-            filter_var_array($_POST, FILTER_SANITIZE_STRING);
-            $raw            = $_POST['raw'];
-            $gclPid         = filter_var($raw['gcr-pid'], FILTER_SANITIZE_NUMBER_INT);
-            $gclEventID     = filter_var($raw['gcr-event-id'], FILTER_SANITIZE_NUMBER_INT);
+            $post_clean = filter_var_array($_POST, FILTER_SANITIZE_STRING);
+            $raw            = $post_clean['raw'];
+            $gcrPid         = filter_var($raw['gcr-pid'], FILTER_SANITIZE_NUMBER_INT);
+            $gcrEventID     = filter_var($raw['gcr-event-id'], FILTER_SANITIZE_NUMBER_INT);
             unset($raw['gcr-pid'], $raw['gcr-event-id']);
             $data = \ExternalModules\ExternalModules::formatRawSettings($module->PREFIX, $module->getProjectId(), $raw);
 
@@ -34,13 +34,13 @@ if (!empty($_POST['action'])) {
             // For this module, we want the subsettings of 'instance' - the repeating block of config
             $instances = $module->parseSubsettingsFromSettings('rewards', $data);
             try {
-                $gclib = new VerifyLibraryClass($gclPid, $gclEventID);
+                $gclib = new VerifyLibraryClass($gcrPid, $gcrEventID);
                 [$resultLib, $messageLib] = $gclib->verifyLibraryConfig();
 
             } catch (Exception $ex) {
                 $module->emError("Exception when verifying Gift Card library in verifyGiftCardRepo");
             }
-            [$resultProj,$messageProj] = $module->verifyEMConfigs( $module->getProjectId(), $gclPid, $gclEventID, $instances );
+            [$resultProj,$messageProj] = $module->verifyEMConfigs( $module->getProjectId(), $gcrPid, $gcrEventID, $instances );
 
             $result = true;
             $message = array();

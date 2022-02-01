@@ -134,12 +134,12 @@ below a threshold.
 Each time a record is saved in the Gift Card Project, a check will be performed to see if the participant is eligible for a reward. 
 Once a participant is found eligible, the following steps will be performed:
 
-    1) An unused reward record meeting the monetary (and brand) requirement(s) in the Gift Card Library, will be placed in Reserved status for this card entry.
+`    1) An unused reward record meeting the monetary (and brand) requirement(s) in the Gift Card Library, will be placed in Reserved status for this card entry.
     2) The participant will receive an email with a link included to their reward gift card
     3) Once the participant clicks on the link, the reward will be display on a webpage
     4) The Gift Card Library project record will update the status of the record to Claimed with a timestamp
     5) The Gift Card Project record will update the reward status to Claimed
-    
+`    
 Once the participant clicks on the link received in the rewards email, the reward display appears as follows:
 
 ![RewardDisplay](img/reward_display.png)
@@ -170,6 +170,18 @@ The Batch Processing webpage will display all records that are ready for a rewar
 selected batch processing. The user will be able to select the records that should receive the reward for each configuration.
 
 ![Batch Processing](img/batch_processing.png)
+
+## Uploading gift card rewards to the Library
+
+To upload gift card rewards to the Library, the Data Importer can be used by following the steps below.
+Create a .csv file with the following headers: reward_id, brand, egift_number, challenge_code, amount, status 
+- The <b>reward_id</b>  is the record number
+- The <b>brand</b> is the company name for the gift card.  If using brand filtering, this name must exactly match the coded value brand label in the gift card project.
+- The <b>egift_number</b> is either the gift card number used to redeem the gift card or it can be an URL to a 3rd party supplier provided gift card link.
+- The <b>challenge_code</b> is an optional field which can be used if the gift card requires a PIN or secondary value in order to redeem the card.
+- The <b>status</b> field should be set to 0 if the gift cards are not ready to be or 1 if the gift cards are ready to be sent.
+`
+Once the .csv file is complete, use the Data Importer to load the data into your Gift Card Library project,
 
 ## NOTES:
 * This External Module uses the emLogger External Module developed at Stanford to log processing messages.

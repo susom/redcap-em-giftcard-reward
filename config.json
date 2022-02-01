@@ -30,7 +30,7 @@
     }
   ],
 
-  "framework-version": 8,
+  "framework-version": 6,
 
   "permissions": [
     "redcap_save_record",

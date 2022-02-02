@@ -38,6 +38,7 @@
 
                 <!-- Display list of records ready for a GC -->
                 <input hidden name="action" value="process"/>
+                <input hidden name="redcap_csrf_token" value="<?php echo $module->getCSRFToken(); ?>" />
                 <?php echo $finalHtml; ?>
 
 

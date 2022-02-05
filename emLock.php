@@ -12,8 +12,6 @@ class emLock
     static $lockId;
     static $ts_start;
 
-
-
     /**
      * See if the requisite tables are in-place
      * @return boolean
@@ -22,13 +20,10 @@ class emLock
         if (self::tablesExist()) {
             return true;
         } else {
-            \Plugin::log("tables do not exist");
             self::createTables();
             if (self::tablesExist()) {
-                \Plugin::log("tables created");
                 return true;
             } else {
-                \Plugin::log("tables unable to be created");
                 return false;
             }
         }
@@ -78,10 +73,6 @@ class emLock
         return true;
     }
 
-
-
-
-
     /**
      * Obtain a lock
      * @param $scope
@@ -92,7 +83,6 @@ class emLock
         if (!self::validate()) throw new Exception("Unable to validate table schema");
 
         if (empty($scope)) {
-            \Plugin::log("Invalid SCOPE!");
             throw New Exception("Invalid SCOPE passed in");
         }
 
@@ -113,7 +103,6 @@ class emLock
         db_query("SET AUTOCOMMIT=0");
 
         $sql = "select id from " . self::tableName ." where scope = '$scope' for update";
-        // \Plugin::log($sql);
         $q = db_query($sql);
 
         self::$lockId = db_result($q, 0);
@@ -123,7 +112,6 @@ class emLock
         if (db_errno() == 0) {
             return self::$lockId;
         } else {
-            \Plugin::log("db_errorno", db_errno(), db_error());
             throw new Exception(db_error());
         }
     }
@@ -145,7 +133,6 @@ class emLock
         $sql = "insert into " . self::logTableName . " (lock_id, duration_ms) " .
             "VALUES (" . self::$lockId . ", " . intval($duration_ms) . ")";
 
-        \Plugin::log($sql);
         db_query($sql);
 
         if ($success) {

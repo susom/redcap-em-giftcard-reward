@@ -186,8 +186,8 @@ Once the .csv file is complete, use the Data Importer to load the data into your
 ## NOTES:
 * This External Module uses the emLogger External Module developed at Stanford to log processing messages.
 * This External Module creates a database table called <b>redcap_em_lock</b>. This External Module will retrieve the semaphore in the
-table to make sure only one record can claim a particular reward. Once a record determines a reward should be sent, the process will claim
-and keep the semaphore until the status of the reward is saved as Reserved.  At that time, the semaphore is released and the next process 
+table to make sure only one record can claim a particular reward. Once a record is eligible for a reward, this EM will claim a reward from the library
+and keep the semaphore until the status of the reward is changed to Reserved.  At that time, the semaphore is released and the next process 
 can claim the semaphore and process a reward.
 
 ## Future Enhancements

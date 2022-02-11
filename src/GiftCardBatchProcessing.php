@@ -79,7 +79,7 @@ foreach ($configs as $configNum => $config) {
 
     // Loop over each config and see if the config is using the batch processing feature
     $configHtml = '';
-    if (!empty($config['batch-processing'])) {
+    if (!empty($config['batch-processing']) and (empty($config['dont-send-email']))) {
 
         // Look for records that are ready for gift cards using the logic in the configuration
         $batchProc = new BatchProcessingInstance($pid, $config);

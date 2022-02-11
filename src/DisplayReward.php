@@ -33,6 +33,11 @@ $ccEmailAddr = '';
 $projRecordId = '';
 $rewardEmailAddr = '';
 $setupComplete = false;
+$dont_send_email = 0;
+$logo = '';
+$headerFooterColor = '';
+$backgroundImage = '';
+$tableButton = '';
 
 /**
  * If there is an action tag included in the post with sendEmail, send an email with the reward to the
@@ -198,7 +203,11 @@ function getGiftCardSummary() {
  * @return bool - true if successful, otherwise false
  */
 function displayGCAndUpdateProjects($pid, $gcToken) {
-    global $module, $setupComplete, $gcConfig, $gclEventId, $gclPid, $gclRecordId, $projRecordId, $claimed, $email_eventID;
+    global $module, $setupComplete, $gcConfig, $gclEventId, $gclPid, $gclRecordId,
+           $projRecordId, $claimed, $email_eventID, $dont_send_email, $logo, $headerFooterColor, $tableButton, $backgroundImage;
+
+    $DEFAULTHEADERCOLOR = '#FFFFFF';
+    $DEFAULTTABLECOLOR = '#DAD7CB';
 
     $status = true;
     if ($setupComplete === false) {
@@ -219,6 +228,17 @@ function displayGCAndUpdateProjects($pid, $gcToken) {
     } else {
         $module->emDebug("Successfully updated gift card library pid $gclPid record $gclRecordId with status $claimed");
     }
+
+    // Retrieve the value of the config parameter on whether or not we allow sending email with the reward codes
+    $dont_send_email = $gcConfig['dont-send-email'];
+
+    // Retrieve styling information
+    $hf_color = $module->getProjectSetting('gcr-display-header-footer-color');
+    $tbl_color = $module->getProjectSetting('gcr-display-table-color');
+    $headerFooterColor = empty($hf_color) ? $DEFAULTHEADERCOLOR : $hf_color;
+    $tableButton = empty($tbl_color) ? $DEFAULTTABLECOLOR : $tbl_color;
+    $logo = $module->getProjectSetting('gcr-display-logo');
+    $backgroundImage = $module->getProjectSetting('gcr-display-background-image');
 
     // Update the project record to tell them they have viewed their reward
     $projEventId = $gcConfig['reward-fk-event-id'];
@@ -462,67 +482,74 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
         <title>Gift Card Reward Display</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
+        <link rel="stylesheet" href="<?php echo $module->getUrl("./css/DisplayReward.css"); ?>" />
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"/>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css"/>
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+        <style>
+            html {background-color: <?php echo $headerFooterColor; ?>}
+            .logo {background-color: <?php echo $headerFooterColor; ?>}
+            body {background-image: url(<?php echo $backgroundImage; ?>)}
+            .p-2 {background-color: <?php echo $tableButton; ?>}
+            .header{background-color: blue}
+        </style>
+        <div class="logo">
+            <img id='logo' src="<?php echo $logo; ?>">
+        </div>
     </header>
     <body>
         <div class="container">
-            <div class="row">
+
+            <div class="row mt-5">
+                <div class="col-3">
+                </div>
+
+                <div class="col-6 pt-5">
+
+                    <div class="border border-2">
+                    <div class="col-12 text-light bg-dark p-3">
+                        <?php echo getGiftCardSubject(); ?>
+                    </div>
+                    <div class="col-12 p-2 border">
+                        <?php echo getGiftCardHeader(); ?>
+                    </div>
+                    <div class="col-12 p-2">
+                        <?php echo giftCardDisplay(); ?>
+                    </div>
+
+                    <?php if (!$dont_send_email) : ?>
+                    <div class="col-12 p-2 border">
+                        <form style="margin-top: 10px; font-size: small;">
+                            <input id="token" style="display:none" value="<?php echo setToken(); ?>">
+
+                            <div>If you would like an email containing this information for your records, update the email address below and select the <b>Send</b> button.</div>
+                            <label><b>Email address:</b></label><input id="emailAddress" style="width: 250px; margin: 10px 10px" value="<?php echo getEmailAddress(); ?>">
+                            <input id="button" type="button" value="Send" onclick="sendReward()"><br>
+
+                            <div id="invalidAddr" style="display:none;color:red">
+                                ***   This is not a valid email address  ***
+                            </div>
+                            <div id="sent" style="display:none;color:red">
+                                ***   An email has been sent   ***
+                            </div>
+                            <div id="notsent" style="display:none;color:red">
+                                ***   Email was not sent, please try again.  ***
+                            </div>
+                        </form>
+                    </div>
+                    <?php endif; ?>
+                    </div>
+                </div>   <!-- end column  -->
 
                 <div class="col-3">
                 </div>
 
-                <div class="col-6">
-
-                    <table id="giftcard" class="table table-bordered" style="max-height:250px; margin-top:100px; text-align:center">
-                        <thead class='thead-dark'>
-                            <tr scope='row'>
-                                <th>
-                                    <?php echo getGiftCardSubject(); ?>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr scope='row'>
-                                <td>
-                                    <?php echo getGiftCardHeader(); ?>
-                                </td>
-                            </tr>
-                            <tr scope='row'>
-                                <td>
-                                    <?php echo giftCardDisplay(); ?>
-                                </td>
-                            </tr>
-                            <tr scope='row'>
-                                <td style="margin-top: 10px; font-size: small">
-                                    <form style="margin-top: 10px; font-size: small">
-                                        <input id="token" style="display:none" value="<?php echo setToken(); ?>">
-
-                                        <div>If you would like an email containing this information for your records, update the email address below and select the <b>Send</b> button.</div>
-                                        <label><b>Email address:</b></label><input id="emailAddress" style="width: 250px; margin: 10px 10px" value="<?php echo getEmailAddress(); ?>">
-                                        <input type="button" value="Send" onclick="sendReward()">
-                                        <br>
-                                        <div id="invalidAddr" style="display:none;color:red">
-                                            ***   This is not a valid email address  ***
-                                        </div>
-                                        <div id="sent" style="display:none;color:red">
-                                            ***   An email has been sent   ***
-                                        </div>
-                                        <div id="notsent" style="display:none;color:red">
-                                            ***   Email was not sent, please try again.  ***
-                                        </div>
-                                    </form>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                </div>   <!-- end column  -->
-            </div>  <!-- end row -->
+            </div>   <!-- end row -->
         </div>  <!-- end container -->
+
+
     </body>
 </html>
 

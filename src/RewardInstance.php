@@ -18,7 +18,8 @@ class RewardInstance
         $email_verification_subject, $email_verification_header,
         $email_from, $email_address, $email_event_id, $alert_email,
         $cc_verification_email, $cc_reward_email, $cc_email,
-        $brand_field, $brand_name, $project_id, $brand_options;
+        $brand_field, $brand_name, $project_id, $brand_options,
+        $dont_send_email, $reward_url_field;
     private $optout_low_balance, $low_balance_number, $allow_multiple_rewards;
     private $gcr_pid, $gcr_event_id, $gcr_pk, $pid;
     private $module, $emLock, $emLockScope;
@@ -41,6 +42,8 @@ class RewardInstance
         $this->gc_status                    = $instance['reward-status'];
         $this->amount                       = $instance['reward-amount'];
         $this->brand_field                  = $instance['brand-field'];
+        $this->reward_url_field             = $instance['reward-url'];
+        $this->dont_send_email              = $instance['dont-send-email'];
 
         // These are reward email parameters
         $this->cc_reward_email              = $instance['cc-reward-email'];
@@ -55,7 +58,7 @@ class RewardInstance
         $this->alert_email                  = $alert_email;
         $this->cc_email                     = $cc_email;
 
-        // There are gift card options
+        // These are gift card options
         $this->optout_low_balance           = $instance['optout-low-balance'];
         $this->low_balance_number           = $instance['low-balance-number'];
         $this->allow_multiple_rewards       = $instance['allow-multiple-rewards'];
@@ -540,6 +543,7 @@ class RewardInstance
             // When the gift card code is a url, put it in the body of the email.
             $bodyDescription = 'Please follow this link to access your gift card:<br>' .
                 '<a href="' . $gcr_record_code. '">' . $gcr_record_code . '</a>';
+            $reward_url = $gcr_record_code;
 
         } else {
 
@@ -549,14 +553,18 @@ class RewardInstance
             // Create the URL for this reward. Add on the project and hash
             $url = $this->module->getUrl("src/DisplayReward.php", true, true);
             $url .= "&reward_token=" . $hash;
+            $reward_url = $url;
 
             // Set up the verification email to send to the recipient
             $bodyDescription = 'To access your gift card reward, please select the link below:<br>' .
                 '<a href="' . $url . '">' . $url . '</a>';
         }
 
-        // Send the verification email to the recipient
-        $status = $this->sendEmailWithLinkToReward($record_id, $bodyDescription);
+        // Send the verification email to the recipient unless the don't send email box was checked
+        $status =  true;
+        if ($this->dont_send_email == '0') {
+            $status = $this->sendEmailWithLinkToReward($record_id, $bodyDescription);
+        }
         if ($status) {
 
             // If the email was successfully sent, update the Gift Card Library to reserve this reward
@@ -581,6 +589,9 @@ class RewardInstance
             // Update the record in this project to save which record we are reserving from the Gift Card Library
             $record[$this->fk_field] = $gcr_record_id;
             $record[$this->gc_status] = 'Reserved';
+            if (!empty($this->reward_url_field)) {
+                $record[$this->reward_url_field] = $reward_url;
+            }
 
             $saveData = array();
             $saveData[$record_id][$this->fk_event_id] = $record;

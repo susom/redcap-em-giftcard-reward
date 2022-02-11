@@ -1,0 +1,42 @@
+
+html {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.logo {
+    padding-left: 20px;
+    padding-bottom: 20px;
+}
+
+#logo{
+    height:60px;
+    width:auto;
+}
+
+body {
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    padding-bottom: 300px;
+}
+
+tbody {
+    table-layout: fixed;
+    min-width: 100px;
+    display: block;
+}
+
+#button {
+    font-weight: bold;
+}
+
+input {
+    border-radius: 5px;
+}
+
+
+.col-12 {
+    text-align: center;
+}
+

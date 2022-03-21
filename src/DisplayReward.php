@@ -182,10 +182,10 @@ function getGiftCardSummary() {
     $amount = $record['amount'];
 
     // Create the message that will be shown to recipients
-    $message = "$" . $amount . " " . $brand . " gift card for your " . $rewardName. " reward.<br><br>";
-    $message .= "Your gift card number is <b>" . $reward . "</b><br>";
+    $message = $module->tt("gift_card", $amount, $brand, $rewardName) . "<br><br>";
+    $message .= $module->tt("redeem_code", $reward) . "<br>";
     if (!empty($code)) {
-        $message .= "The challenge code is <b>" . $code . "</b><br>";
+        $message .= $module->tt("challenge_code", $code) . "<br>";
     }
     $module->emDebug($message);
 
@@ -524,9 +524,9 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
                         <form style="margin-top: 10px; font-size: small;">
                             <input id="token" style="display:none" value="<?php echo setToken(); ?>">
 
-                            <div>If you would like an email containing this information for your records, update the email address below and select the <b>Send</b> button.</div>
-                            <label><b>Email address:</b></label><input id="emailAddress" style="width: 250px; margin: 10px 10px" value="<?php echo getEmailAddress(); ?>">
-                            <input id="button" type="button" value="Send" onclick="sendReward()"><br>
+                            <div><?php echo $module->tt("send_codes_in_email", "Send"); ?></div>
+                            <label><b><?php echo $module->tt("email_addr"); ?></b></label><input id="emailAddress" style="width: 250px; margin: 10px 10px" value="<?php echo getEmailAddress(); ?>">
+                            <input id="button" type="button" value="<?php echo $module->tt("email_send_button"); ?>" onclick="sendReward()"><br>
 
                             <div id="invalidAddr" style="display:none;color:red">
                                 ***   This is not a valid email address  ***

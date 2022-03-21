@@ -7,10 +7,15 @@
 
   "versions": [
     { "1.0.0": "Initial",
-      "1.0.1": "Add framework-version"
+      "1.0.1": "Add framework-version",
+      "1.0.2": "Clean ajax.php inputs",
+      "1.0.3": "Changed Framework from 6 to 8",
+      "1.0.4": "Add token to batch processing needed for Framework 8",
+      "1.0.5": "Take out hook logging",
+      "1.1.0": "Ability to inhibit emails and customize gift card display",
+      "2.0.0": "Add internationalization"
     }
   ],
-
   "compatibility": {
     "php-version-min": "",
     "php-version-max": "",

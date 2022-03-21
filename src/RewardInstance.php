@@ -533,6 +533,8 @@ class RewardInstance
      */
     private function reserveReward($record_id, $reward_record) {
 
+        global $module;
+
         $message = '';
         $gcr_record_id = $reward_record[$this->gcr_pk];
 
@@ -556,7 +558,7 @@ class RewardInstance
             $reward_url = $url;
 
             // Set up the verification email to send to the recipient
-            $bodyDescription = 'To access your gift card reward, please select the link below:<br>' .
+            $bodyDescription = $module->tt("your_link") . '<br>' .
                 '<a href="' . $url . '">' . $url . '</a>';
         }
 

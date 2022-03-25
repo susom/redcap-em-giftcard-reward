@@ -235,6 +235,10 @@ selected batch processing. The user will be able to select the records that shou
 
 ![Batch Processing](img/batch_processing.png)
 
+## Internationalization
+
+This module uses the Internationalization framework.  There is an English.ini file which includes phrases used for displays. 
+
 ## NOTES:
 * This External Module uses the emLogger External Module developed at Stanford to log processing messages.
 * This External Module creates a database table called <b>redcap_em_lock</b>. This External Module will retrieve the semaphore in the

@@ -3,7 +3,7 @@
 <html lang="en">
     <head>
         <!-- Required meta tags -->
-        <title>Gift Card Batch Processing</title>
+        <title><?php echo $module->tt("webpage_title"); ?></title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"/>
@@ -25,12 +25,12 @@
         <tr class="container pl-lg-5">
             <div class="row pl-lg-5">
                 <h3>
-                    Gift Card Batch Processing Page
+                    <?php echo $module->tt("batch_web_title"); ?>
                 </h3>
             </div>
             <div class="row pl-lg-5">
                 <h5>
-                    The records below are eligible for Gift Cards. Select the records that you would like to send gift cards to and they will be processed and sent:
+                    <?php echo $module->tt("batch_descrip"); ?>
                 </h5>
             </div>
 
@@ -44,7 +44,7 @@
 
                 <!-- Form submit button -->
                 <div class="row pl-lg-5 pb-5 pt-lg-5">
-                    <input class="btn-primary" type="submit" value="Process All Selected Gift Card Records">
+                    <input class="btn-primary" type="submit" value="<?php echo $module->tt("batch_button"); ?>">
                 </div>
 
             </form>

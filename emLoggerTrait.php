@@ -84,7 +84,7 @@ trait emLoggerTrait
         // Set if debug mode once on the first log call
         if (is_null($this->emLoggerDebug)) {
             $systemDebug = $this->getSystemSetting('enable-system-debug-logging');
-            $projectDebug = !empty($_GET['pid']) && $this->getProjectSetting('enable-project-debug-logging');
+            $projectDebug = !empty($_GET['pid']) && intval($_GET['pid']) == $_GET['pid'] && $this->getProjectSetting('enable-project-debug-logging');
             $this->emLoggerDebug = $systemDebug || $projectDebug;
         }
         return $this->emLoggerDebug;

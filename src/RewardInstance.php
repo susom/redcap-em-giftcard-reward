@@ -357,26 +357,32 @@ class RewardInstance
             return [true, $message];
         }
 
-        // We found that this user is eligible for an gift card, so find the next award that fits our criteria
-        $this->emLock->lock($this->emLockScope);
-        [$found, $reward_record] = $this->findNextAvailableReward();
-        if (!$found) {
+        try {
+            // We found that this user is eligible for an gift card, so find the next award that fits our criteria
+            $this->emLock->lock($this->emLockScope);
+            [$found, $reward_record] = $this->findNextAvailableReward();
+            if (!$found) {
 
-            // We were not able to find a reward that meets our criteria.
-            $message = "No reward was found in project " . $this->gcr_pid . " which meets our criteria for $this->title reward";
-            if (!empty($this->brand_name)) {
-                $message .= " for brand " . $this->brand_name;
+                // We were not able to find a reward that meets our criteria.
+                $message = "No reward was found in project " . $this->gcr_pid . " which meets our criteria for $this->title reward";
+                if (!empty($this->brand_name)) {
+                    $message .= " for brand " . $this->brand_name;
+                }
+
+                // Send email to the alert email address to notify them there are no longer any gift cards and update record
+                $this->sendAlertEmailNoGiftCards($record_id);
+
+            } else {
+
+                // There is a valid reward available so reserve it
+                [$valid, $message] = $this->reserveReward($record_id, $reward_record);
             }
-
-            // Send email to the alert email address to notify them there are no longer any gift cards and update record
-            $this->sendAlertEmailNoGiftCards($record_id);
-
-        } else {
-
-            // There is a valid reward available so reserve it
-            [$valid, $message] = $this->reserveReward($record_id, $reward_record);
+        } catch (Exception $ex) {
+            $this->module->emError("Exception encountered when processing reward: " . $ex->getMessage());
+            $message .= "<br>Exception encountered! Please contact a REDCap administrator.";
+        } finally {
+            $this->emLock->release();
         }
-        $this->emLock->release();
 
         return [$valid, $message];
     }

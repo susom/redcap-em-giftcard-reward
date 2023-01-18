@@ -64,6 +64,7 @@ class BatchProcessingInstance
     }
 
     private function formatRecordsToHtml($records) {
+        global $module;
 
         // If there are no records to display for this config, skip it.
         if (empty($records)) {
@@ -94,7 +95,7 @@ class BatchProcessingInstance
 
         global $module;
 
-        $html = '<h4>' . $module->tt("batch_title") . '<span class="config">' . $this->config_name . '</span></h4>
+        $html = '<h4>' . $module->tt("batch_title") . ': <span class="config"> ' . $this->config_name . '</span></h4>
                  <span id="select_links_forms">
                     <a href="javascript:;" onclick="selectAllInConfig(\'' . $this->label . '\',true)" style="margin-right:10px;text-decoration:underline;">' . $module->tt("select_all") . '</a>|
                     <a href="javascript:;" onclick="selectAllInConfig(\'' . $this->label . '\',false)" style="margin-left:5px;text-decoration:underline;">' . $module->tt("deselect_all") . '</a>

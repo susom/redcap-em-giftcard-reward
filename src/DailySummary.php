@@ -42,7 +42,7 @@ try {
     $gcr_event_id = $module->checkGiftCardLibEventId($gcr_proj, $gcr_event_id);
 
     // First make sure the Library is valid (this is the same repo for all configurations)
-    $gclib = new VerifyLibraryClass($gcr_pid, $gcr_event_id);
+    $gclib = new VerifyLibraryClass($gcr_pid, $gcr_event_id, $module);
     [$valid, $message] = $gclib->verifyLibraryConfig();
 
     if (!$valid) {

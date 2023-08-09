@@ -114,6 +114,7 @@ class RewardInstance
 
         if ($message !== '') {
             $message = "<li>" . $message . "</li>";
+            return [false, $message];
         }
 
         // Check that the forms that the required fields are on are in this event.

@@ -241,10 +241,7 @@ This module uses the Internationalization framework.  There is an English.ini fi
 
 ## NOTES:
 * This External Module uses the emLogger External Module developed at Stanford to log processing messages.
-* This External Module creates a database table called <b>redcap_em_lock</b>. This External Module will retrieve the semaphore in the
-table to make sure only one record can claim a particular reward. Once a record is eligible for a reward, this EM will claim a reward from the library
-and keep the semaphore until the status of the reward is changed to Reserved.  At that time, the semaphore is released and the next process 
-can claim the semaphore and process a reward.
+* This External Module uses the DB functions GET_LOCK and RELEASE_LOCK when reserving a gift card from the gift card library so more than one record cannot reserve the same gift card.
 
 ## Future Enhancements
     - Add the ability for projects to download a standard Gift Card Library Template automatically

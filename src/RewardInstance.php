@@ -6,7 +6,6 @@ use Project;
 use REDCap;
 use Exception;
 
-require_once "emLock.php";
 require_once "src/VerifyLibraryClass.php";
 
 class RewardInstance
@@ -22,7 +21,7 @@ class RewardInstance
         $dont_send_email, $reward_url_field;
     private $optout_low_balance, $low_balance_number, $allow_multiple_rewards;
     private $gcr_pid, $gcr_event_id, $gcr_pk, $pid;
-    private $module, $emLock, $emLockScope;
+    private $module, $lock_name;
     private $gcr_proj;
     private $gcr_required_fields;
 
@@ -63,16 +62,7 @@ class RewardInstance
         $this->low_balance_number           = $instance['low-balance-number'];
         $this->allow_multiple_rewards       = $instance['allow-multiple-rewards'];
 
-        // Retrieve the lock class that will put a database lock
         try {
-            $this->emLock = new emLock();
-            $lock_status = $this->emLock->validate();
-            if ($lock_status) {
-                $this->emLockScope = 'GCLib' . $this->gcr_pid;
-            } else {
-                $this->module->emError("Can not setup locking system for DB Lock for project " . $this->project_id . ", GC Library project " . $this->gcr_pid);
-            }
-
             // Retrieve data dictionary of library project
             $this->gcr_pid = $gcr_pid;
             $this->gcr_proj = new Project($this->gcr_pid);
@@ -85,6 +75,9 @@ class RewardInstance
             // Retrieve the gift card library required fields
             $this->gcr_required_fields = $module->getGiftCardLibraryFields();
 
+            // Create a lock name around the GC Library
+            $this->lock_name = 'GCLib' . $this->gcr_pid;
+
             // Retrieve the brand options if the brand option is selected.
             if ($this->brand_field != '') {
                 $this->retrieveFieldOptions();
@@ -93,7 +86,6 @@ class RewardInstance
         } catch (Exception $ex) {
             $this->module->emError("Exception caught initializing Reward Instance for project $this->project_id, with error: " . json_encode($ex));
         }
-
     }
 
 
@@ -122,6 +114,7 @@ class RewardInstance
 
         if ($message !== '') {
             $message = "<li>" . $message . "</li>";
+            return [false, $message];
         }
 
         // Check that the forms that the required fields are on are in this event.
@@ -357,29 +350,83 @@ class RewardInstance
             return [true, $message];
         }
 
-        // We found that this user is eligible for an gift card, so find the next award that fits our criteria
-        $this->emLock->lock($this->emLockScope);
-        [$found, $reward_record] = $this->findNextAvailableReward();
-        if (!$found) {
+        try {
 
-            // We were not able to find a reward that meets our criteria.
-            $message = "No reward was found in project " . $this->gcr_pid . " which meets our criteria for $this->title reward";
-            if (!empty($this->brand_name)) {
-                $message .= " for brand " . $this->brand_name;
+            // We found that this user is eligible for a gift card, so find the next award that fits our criteria
+            $status = $this->getLock($this->lock_name, $record_id);
+            $this->module->emDebug("Status of lock: " . $status);
+            [$found, $reward_record] = $this->findNextAvailableReward();
+            if (!$found) {
+
+                // We were not able to find a reward that meets our criteria.
+                $message = "No reward was found in project " . $this->gcr_pid . " which meets our criteria for $this->title reward";
+                if (!empty($this->brand_name)) {
+                    $message .= " for brand " . $this->brand_name;
+                }
+
+                // Send email to the alert email address to notify them there are no longer any gift cards and update record
+                $this->sendAlertEmailNoGiftCards($record_id);
+
+            } else {
+
+                // There is a valid reward available so reserve it
+                [$valid, $message] = $this->reserveReward($record_id, $reward_record);
             }
-
-            // Send email to the alert email address to notify them there are no longer any gift cards and update record
-            $this->sendAlertEmailNoGiftCards($record_id);
-
-        } else {
-
-            // There is a valid reward available so reserve it
-            [$valid, $message] = $this->reserveReward($record_id, $reward_record);
+        } catch (Exception $ex) {
+            $this->module->emError("Exception encountered when processing reward: " . $ex->getMessage());
+            $message .= "<br>Exception encountered! Please contact a REDCap administrator.";
+        } finally {
+            $this->module->emDebug("In finally: Before releasing lock");
+            $this->releaseLock($this->lock_name);
+            $this->module->emDebug("In finally: Released lock");
         }
-        $this->emLock->release();
 
         return [$valid, $message];
     }
+
+
+    /**
+     * This function retrieves a DB lock
+     *
+     * @param $lock_name
+     * @return int
+     */
+    private function getLock($lock_name, $record_id) {
+
+        // Obtain lock for reward library
+        $result = $this->module->query("SELECT GET_LOCK(?, 5)", [$lock_name]);
+        $row = $result->fetch_row();
+        if ($row[0] !== 1) {
+            $record[$record_id][$this->fk_event_id][$this->gc_status] = 'Database lock problem - contact REDCap team';
+            $err_msg = "Database lock is preventing processing - alert REDCap team";
+            $message = $this->saveGCData($this->project_id, 'array', $record, $err_msg);
+
+            throw new Exception("Unable to obtain lock on " . $lock_name);
+        } else {
+            $this->module->emDebug("Obtained Lock: $lock_name");
+            $status = 1;
+        }
+
+        return $status;
+    }
+
+
+    /**
+     * This function releases the DB lock
+     *
+     * @param $lock_name
+     * @return void
+     */
+    private function releaseLock($lock_name) {
+
+        // Obtain lock for reward library
+        if ($lock_name != null) {
+            $result = $this->module->query("select RELEASE_LOCK(?)", [$lock_name]);
+            $row = $result->fetch_row();
+            $this->module->emDebug("Released Lock: " . $lock_name . ", with status " . $row[0]);
+        }
+    }
+
 
     /**
      * This function will send an ALERT email when there are no more gift cards available and
@@ -407,10 +454,9 @@ class RewardInstance
 
         // Save the status in the record to show that we were not able to send them a reward
         $saveRecord[$record_id][$this->fk_event_id][$this->gc_status] = "Unavailable - no gift cards available";
-        $saveStatus = REDCap::saveData($this->project_id, 'array', $saveRecord);
-        if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
-            $this->module->emError("Problem saving status to project $this->project_id record $record_id");
-        }
+        $err_msg = "Problem saving status to project $this->project_id record $record_id";
+        $message = $this->saveGCData($this->project_id, 'array', $saveRecord, $err_msg);
+
     }
 
     /**
@@ -504,16 +550,9 @@ class RewardInstance
                 $message = "Duplicate email addresss $this->email_address for reward $this->title and record $record_id";
 
                 // Update the status for this record to say they were not sent a reward because it is a duplicate
-                $record[$this->gc_status] = 'Duplicate email';
-                $this->module->emDebug("This email, $this->email_address in record $record_id, has already been sent a reward - not sending another.");
-
-                $saveData = array();
-                $saveData[$record_id][$this->fk_event_id] = $record;
-                $saveStatus = REDCap::saveData($this->project_id, 'array', $saveData, 'overwrite');
-                if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
-                    $status = "Duplicate email for $record in project $this->project_id";
-                    $this->module->emError($status);
-                }
+                $record[$record_id][$this->fk_event_id][$this->gc_status] = 'Duplicate email';
+                $err_msg = "Duplicate email for $record_id in project $this->project_id";
+                $message = $this->saveGCData($this->project_id, 'array', $record, $err_msg);
 
                 return [false, $message];
             }
@@ -563,44 +602,40 @@ class RewardInstance
         // Send the verification email to the recipient unless the don't send email box was checked
         $status =  true;
         if ($this->dont_send_email == '0') {
-            $status = $this->sendEmailWithLinkToReward($record_id, $bodyDescription);
+            // There should be an email address entered otherwise we can't send the reward
+            if (empty($this->email_address)) {
+                // Save the fact that there is no email address entered so it can be corrected
+                $record[$record_id][$this->fk_event_id][$this->gc_status] = 'No email address entered';
+                $err_msg = "Problem saving Gift Card project updates for record $record_id in project $this->project_id";
+                $message .= $this->saveGCData($this->project_id, 'array', $record, $err_msg);
+                $status = false;
+            } else {
+                $status = $this->sendEmailWithLinkToReward($record_id, $bodyDescription);
+            }
         }
         if ($status) {
 
             // If the email was successfully sent, update the Gift Card Library to reserve this reward
-            $reward_record['status'] = '2';   //  ('Reserved')
-            $reward_record['reward_name'] = $this->title;
-            $reward_record['reward_pid'] = $this->project_id;
-            $reward_record['reward_record'] = $record_id;
-            $reward_record['reserved_ts'] = date('Y-m-d H:i:s');
-            $reward_record['reward_hash'] = $hash;
-            $reward_record['url'] = $url;
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['status'] = '2';   //  ('Reserved')
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['reward_name'] = $this->title;
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['reward_pid'] = $this->project_id;
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['reward_record'] = $record_id;
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['reserved_ts'] = date('Y-m-d H:i:s');
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['reward_hash'] = $hash;
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['url'] = $url;
 
             // Format the data the way REDCap wants it
-            $saveData = array();
-            $saveData[$gcr_record_id][$this->gcr_event_id] = $reward_record;
-            $saveStatus = REDCap::saveData($this->gcr_pid, 'array', $saveData, 'overwrite', 'YMD');
-            if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
-                $status = "<li>Problem saving Gift Card Library updates for record $gcr_record_id in project ". $this->gcr_pid . "</li>";
-                $message .= $status;
-                $this->module->emError($status);
-            }
+            $err_msg = "<li>Problem saving Gift Card Library updates for record $gcr_record_id in project ". $this->gcr_pid . "</li>";
+            $message .= $this->saveGCData($this->gcr_pid, 'array', $reward_record, $err_msg);
 
             // Update the record in this project to save which record we are reserving from the Gift Card Library
-            $record[$this->fk_field] = $gcr_record_id;
-            $record[$this->gc_status] = 'Reserved';
+            $record[$record_id][$this->fk_event_id][$this->fk_field] = $gcr_record_id;
+            $record[$record_id][$this->fk_event_id][$this->gc_status] = 'Reserved';
             if (!empty($this->reward_url_field)) {
-                $record[$this->reward_url_field] = $reward_url;
+                $record[$record_id][$this->fk_event_id][$this->reward_url_field] = $reward_url;
             }
-
-            $saveData = array();
-            $saveData[$record_id][$this->fk_event_id] = $record;
-            $saveStatus = REDCap::saveData($this->project_id, 'array', $saveData, 'overwrite');
-            if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
-                $status = "Problem saving Gift Card project updates for record $record in project $this->project_id";
-                $message .= "<li>" . $status . "</li>";
-                $this->module->emError($status);
-            }
+            $err_msg = "Problem saving Gift Card project updates for record $gcr_record_id in project $this->project_id";
+            $message .= $this->saveGCData($this->project_id, 'array', $record, $err_msg);
 
         } else {
             // The email was not able to be sent - this is an error
@@ -613,6 +648,32 @@ class RewardInstance
             return [false, $message];
         }
     }
+
+
+    /**
+     * This function saves data to the database and checks for errors with the save.
+     *
+     * @param $pid
+     * @param $format
+     * @param $data
+     * @param $error
+     * @return string
+     */
+    private function saveGCData($pid, $format, $data, $error) {
+
+        // Save the data passed and check the status for errors
+        $message = '';
+        $saveStatus = REDCap::saveData($pid, $format, $data, 'overwrite');
+        if (empty($saveStatus['ids']) || !empty($saveStatus['errors'])) {
+            $status = $error;
+            $message = "<li>" . $status . "</li>";
+            $this->module->emError($status);
+        }
+
+        return $message;
+    }
+
+
 
     /**
      * Send the recipient the email with a link so they can retrieve their gift card

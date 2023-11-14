@@ -15,10 +15,10 @@ if (!empty($_POST['action'])) {
 
     switch ($action) {
         case "insert_form":
-            $module->emLog("In insert_form");
+            $module->emLog('In insert_form');
             break;
         case "designate_event":
-            $module->emLog("In designate_event");
+            $module->emLog('In designate_event');
             break;
         case "getStatus":
 
@@ -34,11 +34,11 @@ if (!empty($_POST['action'])) {
             // For this module, we want the subsettings of 'instance' - the repeating block of config
             $instances = $module->parseSubsettingsFromSettings('rewards', $data);
             try {
-                $gclib = new VerifyLibraryClass($gcrPid, $gcrEventID);
+                $gclib = new VerifyLibraryClass($gcrPid, $gcrEventID, $module);
                 [$resultLib, $messageLib] = $gclib->verifyLibraryConfig();
 
             } catch (Exception $ex) {
-                $module->emError("Exception when verifying Gift Card library in verifyGiftCardRepo");
+                $module->emError('Exception when verifying Gift Card library in verifyGiftCardRepo');
             }
             [$resultProj,$messageProj] = $module->verifyEMConfigs( $module->getProjectId(), $gcrPid, $gcrEventID, $instances );
 
@@ -59,22 +59,22 @@ if (!empty($_POST['action'])) {
             break;
 
         case "checkForms":
-            $module->emLog("In checkForms");
+            $module->emLog('In checkForms');
 
             break;
         case "test":
-            $module->emLog("In test");
+            $module->emLog('In test');
 
     }
 
     header('Content-Type: application/json');
     echo json_encode(
-        array(
+        filter_var_array ( array(
             'result' => $result,
             'message' => $message,
             'callback' => $callback,
             'delay'=> $delay
-        )
+        ), FILTER_SANITIZE_STRING)
     );
     exit();
 

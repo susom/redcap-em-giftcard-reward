@@ -12,7 +12,7 @@ $pid     = isset($_GET['pid']) && !empty($_GET['pid']) ? filter_var($_GET['pid']
 $action  = isset($_POST['action']) && !empty($_POST['action']) ? filter_var($_POST['action'], FILTER_SANITIZE_STRING) : null;
 $records = isset($_POST['records']) && !empty($_POST['records']) ? filter_var($_POST['records'], FILTER_SANITIZE_STRING) : null;
 
-$stylesheet = $module->getUrl('config/batch.css');
+$stylesheet = $module->getUrl('config/batch.css', true, true);
 
 // Retrieve all the gift card configurations for this project
 $configs = $module->getSubSettings("rewards");
@@ -87,6 +87,5 @@ foreach ($configs as $configNum => $config) {
     }
     $finalHtml .= $configHtml;
 }
-
 
 require_once $module->getModulePath() . "config/batch.php";

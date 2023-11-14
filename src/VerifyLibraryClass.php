@@ -7,29 +7,26 @@ use \Exception;
 
 class VerifyLibraryClass
 {
-    /** @var \Stanford\GiftcardReward\GiftcardReward $module */
-
     private $gcr_pid, $gcr_event_id, $gcr_pk;
     private $gcr_proj, $module;
 
-    public function __construct($gcr_pid, $gcr_event_id)
+    public function __construct($gcr_pid, $gcr_event_id, $module)
     {
-        global $module;
+        $this->module = $module;
 
         // Get the data dictionary for the Library project
         try {
             $this->gcr_proj = new Project($gcr_pid);
             $this->gcr_proj->setRepeatingFormsEvents();
         } catch (Exception $ex) {
-            $module->emError("Cannot retrieve the Gift Card Library data dictionary!");
+            $this->module->emError("Cannot retrieve the Gift Card Library data dictionary!");
             return false;
         }
 
         // Find the needed gift card library values
         $this->gcr_pk = $this->gcr_proj->table_pk;
-        $this->gcr_event_id = $module->checkGiftCardLibEventId($this->gcr_proj, $gcr_event_id);
+        $this->gcr_event_id = $this->module->checkGiftCardLibEventId($this->gcr_proj, $gcr_event_id);
         $this->gcr_pid = $gcr_pid;
-        $this->module = $module;
     }
 
     /**

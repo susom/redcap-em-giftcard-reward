@@ -13,7 +13,9 @@
       "1.0.4": "Add token to batch processing needed for Framework 8",
       "1.0.5": "Take out hook logging",
       "1.1.0": "Ability to inhibit emails and customize gift card display",
-      "2.0.0": "Add internationalization"
+      "2.0.0": "Add internationalization",
+      "3.0.0": "Change to use DB Internal Lock/Release functions.  Added additional messages when gift cards cannot be reserved",
+      "3.1.0": "Changed framework to 10"
     }
   ],
   "compatibility": {
@@ -36,7 +38,7 @@
     }
   ],
 
-  "framework-version": 8,
+  "framework-version": 10,
 
   "permissions": [
     "redcap_save_record",
@@ -50,7 +52,8 @@
       {
         "name": "Gift Cards: Batch Processing",
         "icon": "gear",
-        "url": "src/GiftCardBatchProcessing.php"
+        "url": "src/GiftCardBatchProcessing.php",
+        "show-header-and-footer": true
       }
     ]
   },

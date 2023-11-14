@@ -43,9 +43,9 @@ $tableButton = '';
  * If there is an action tag included in the post with sendEmail, send an email with the reward to the
  * email address that is entered.
  */
+
 if ($action === "sendEmail") {
 
-    $module->emDebug("Going to sendRewardEmail");
     $status = sendRewardEmail($pid, $gcToken, $emailAddr);
     if (!$status) {
         $module->emError("Error encountered when trying to send email with reward information for request pid $pid, token $gcToken ");
@@ -56,14 +56,14 @@ if ($action === "sendEmail") {
     return;
 
 } else {
-    /**
-     * Process the token to find the gift card record so we can send the recipient their reward
-     */
+
+    // Process the token to find the gift card record so we can send the recipient their reward
     $status = displayGCAndUpdateProjects($pid, $gcToken);
     if (!$status) {
         $module->emError("Error encountered when processing reward token for request pid $pid, token $gcToken ");
     }
 }
+
 
 /**
  * @return string - message with reward values for recipient
@@ -91,6 +91,7 @@ function giftCardDisplay() {
 /**
  * @return string - subject value set in project setup with all piping converted to record values
  */
+
 function getGiftCardSubject() {
     global $subject, $setupComplete, $pid, $gcToken, $gcConfig, $projRecordId, $projEventId;
 
@@ -112,6 +113,7 @@ function getGiftCardSubject() {
 
     return $subject;
 }
+
 
 /**
  * @return string - header value set in project setup with all piping converted to record values
@@ -141,7 +143,6 @@ function getGiftCardHeader() {
 /**
  * @return string|null
  */
-
 function getEmailAddress() {
     global $setupComplete, $pid, $gcToken, $rewardEmailAddr;
 
@@ -157,7 +158,6 @@ function getEmailAddress() {
         return $rewardEmailAddr;
     }
 }
-
 
 /**
  * This function will put together the message of the reward to be sent in email and displayed on the webpage.
@@ -180,6 +180,7 @@ function getGiftCardSummary() {
     $code = $record['challenge_code'];
     $brand = $record['brand'];
     $amount = $record['amount'];
+    $module->emDebug("This is the GC amount: " . $amount);
 
     // Create the message that will be shown to recipients
     $message = $module->tt("gift_card", $amount, $brand, $rewardName) . "<br><br>";
@@ -192,7 +193,6 @@ function getGiftCardSummary() {
     return $message;
 }
 
-
 /**
  * This function will email the participant their email reward and also display it on the webpage. Also the
  * gift card library and gift card project will both be updated to indicate the participant has viewed their
@@ -202,6 +202,8 @@ function getGiftCardSummary() {
  * @param $gcToken
  * @return bool - true if successful, otherwise false
  */
+
+
 function displayGCAndUpdateProjects($pid, $gcToken) {
     global $module, $setupComplete, $gcConfig, $gclEventId, $gclPid, $gclRecordId,
            $projRecordId, $claimed, $email_eventID, $dont_send_email, $logo, $headerFooterColor, $tableButton, $backgroundImage;
@@ -264,6 +266,7 @@ function displayGCAndUpdateProjects($pid, $gcToken) {
  * @param $pid
  * @param $gcToken
  */
+
 function findGiftCardData($pid, $gcToken) {
 
     global $module, $gcConfig, $gclRecord, $setupComplete, $gclPid, $gclEventId, $gclRecordId, $projRecordId, $ccEmailAddr, $rewardEmailAddr;
@@ -297,13 +300,8 @@ function findGiftCardData($pid, $gcToken) {
                 $module->emError("Cannot find Gift Card Configuration titled " . json_encode($gclRecord['reward_name']));
                 $setupComplete = false;
             } else {
-
                 // Now that we have the configuration, we can find the GC Project record to get the email address
                 $rewardEmailAddr = getProjectEmail($pid, $projRecordId);
-                if (empty($rewardEmailAddr)) {
-                    $module->emError("Cannot retrieve gift card project email " . $gclRecord['reward_record']);
-                    $setupComplete = false;
-                }
             }
         }
     }
@@ -318,6 +316,7 @@ function findGiftCardData($pid, $gcToken) {
  * @param $gcToken
  * @return array - gift card library record
  */
+
 function findGiftCardLibraryRecord($pid, $gcrPid, $gcToken) {
 
     global $module, $gclRecordId, $gclEventId;
@@ -338,12 +337,14 @@ function findGiftCardLibraryRecord($pid, $gcrPid, $gcToken) {
     return $gclData;
 }
 
+
 /**
  * This function will use the gift card reward name to find the configuration associated with this reward.
  *
  * @param $rewardName
  * @return array - gift card configuration
  */
+
 function getGiftCardConfig($rewardName) {
 
     global $module;
@@ -362,6 +363,7 @@ function getGiftCardConfig($rewardName) {
     return $gcInstance;
 }
 
+
 /**
  * This function will retrieve the gift card project record based on the record number
  * saved in the gift card library project.
@@ -370,6 +372,7 @@ function getGiftCardConfig($rewardName) {
  * @param $record_id
  * @return array - gift card project record
  */
+
 function getProjectEmail($pid, $record_id) {
 
     global $module, $gcConfig, $Proj;
@@ -396,6 +399,7 @@ function getProjectEmail($pid, $record_id) {
     }
 }
 
+
 /**
  * @return mixed|null
  */
@@ -410,6 +414,7 @@ function setToken() {
  *
  * @return bool - true - email was successfully sent, otherwise false
  */
+
 function sendRewardEmail($pid, $gcToken, $emailAddress) {
 
     global $module, $setupComplete, $gcConfig, $projRecordId, $ccEmailAddr, $gclPid, $gclEventId, $gclRecordId;
@@ -482,7 +487,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
         <title>Gift Card Reward Display</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
-        <link rel="stylesheet" href="<?php echo $module->getUrl("./css/DisplayReward.css"); ?>" />
+        <link rel="stylesheet" href="<?php echo $module->getUrl("./css/DisplayReward.css",true,true); ?>" />
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"/>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css"/>
 
@@ -498,8 +503,10 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
         <div class="logo">
             <img id='logo' src="<?php echo $logo; ?>">
         </div>
+
     </header>
     <body>
+
         <div class="container">
 
             <div class="row mt-5">
@@ -541,7 +548,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
                     </div>
                     <?php endif; ?>
                     </div>
-                </div>   <!-- end column  -->
+                </div>   <! -- end column  -->
 
                 <div class="col-3">
                 </div>
@@ -549,9 +556,9 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
             </div>   <!-- end row -->
         </div>  <!-- end container -->
 
-
     </body>
 </html>
+
 
 <script>
 

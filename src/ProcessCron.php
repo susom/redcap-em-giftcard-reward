@@ -42,11 +42,13 @@ foreach($configs as $config_num => $config_info) {
             if (!$status) {
                 $message = "[Processing cron PID:" . $pid . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate record logic!";
                 $module->emError($message);
+                \REDCap::logEvent($message);
                 return;
             }
 
         } catch (Exception $ex) {
             $module->emError("Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage());
+            \REDCap::logEvent("Cannot create instance of class RewardInstance. Exception message: " , $ex->getMessage());
             return;
         }
 
@@ -74,6 +76,7 @@ foreach($configs as $config_num => $config_info) {
                 } else {
                     $message .= "<br>ERROR: Reward for [PID:$pid] record $record_id for " . $config_info["reward-title"] . " reward was not processed.";
                     $module->emError($message);
+                    \REDCap::logEvent($message);
                 }
             }
         }

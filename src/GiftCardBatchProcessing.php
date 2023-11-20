@@ -66,7 +66,8 @@ if ($action == "process") {
             $module->emDebug("Result of batch processing: " . $batch_message);
 
         } catch (Exception $ex) {
-            $module->emError("Exception when sending batch GC for project $pid");
+            $module->emError("Exception when sending batch GC for project $pid" . $ex->getMessage());
+            \REDCap::logEvent("Exception when sending batch GC for project $pid", $ex->getMessage());
         }
 
     }

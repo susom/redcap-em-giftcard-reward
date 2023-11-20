@@ -51,6 +51,7 @@ class BatchProcessingInstance
             } else {
                 $this->message = "Field trim($field_name) cannot be displayed because it is not in this event (event_id = $this->config_event_id)";
                 $module->emError($this->message);
+                \REDCap::logEvent($this->message);
             }
         }
 
@@ -158,6 +159,7 @@ class BatchProcessingInstance
         } catch (Exception $ex) {
             $this->message .= "<br>Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage();
             $module->emError($this->message);
+            \REDCap::logEvent($this->message);
             return null;
         }
 
@@ -179,6 +181,7 @@ class BatchProcessingInstance
         } else {
             $message = "[PID:" . $this->pid . "] Reward configuration " . $this->config_name . " is invalid so cannot evaluate for records!";
             $module->emError($message);
+            \REDCap::logEvent($message);
             return null;
         }
 

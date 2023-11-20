@@ -49,6 +49,7 @@ if ($action === "sendEmail") {
     $status = sendRewardEmail($pid, $gcToken, $emailAddr);
     if (!$status) {
         $module->emError("Error encountered when trying to send email with reward information for request pid $pid, token $gcToken ");
+        \REDCap::logEvent("Error encountered when trying to send email with reward information for request pid $pid, token $gcToken ");
     }
 
     // Send back the status so we know if an email was sent or not
@@ -61,6 +62,7 @@ if ($action === "sendEmail") {
     $status = displayGCAndUpdateProjects($pid, $gcToken);
     if (!$status) {
         $module->emError("Error encountered when processing reward token for request pid $pid, token $gcToken ");
+        \REDCap::logEvent("Error encountered when processing reward token for request pid $pid, token $gcToken ");
     }
 }
 
@@ -226,6 +228,7 @@ function displayGCAndUpdateProjects($pid, $gcToken) {
     $returnStatus = REDCap::saveData($gclPid, 'array', $saveReward);
     if (empty($returnStatus['ids']) || !empty($returnStatus['errors'])) {
         $module->emError("Problem saving Gift Card library status for record $gclRecordId in project $gclPid and status $claimed");
+        \REDCap::logEvent("Problem saving Gift Card library status for record $gclRecordId in project $gclPid and status $claimed");
         $status = false;
     } else {
         $module->emDebug("Successfully updated gift card library pid $gclPid record $gclRecordId with status $claimed");
@@ -249,6 +252,7 @@ function displayGCAndUpdateProjects($pid, $gcToken) {
     $returnStatus = REDCap::saveData($pid, 'array', $projData);
     if (empty($returnStatus['ids']) || !empty($returnStatus['errors'])) {
         $module->emError("Problem saving Gift Card project status for record $projRecordId in project $pid and status $claimed");
+        \REDCap::logEvent("Problem saving Gift Card project status for record $projRecordId in project $pid and status $claimed");
         $status = false;
     } else {
         $module->emDebug("Successfully update gift card project pid $pid record $projRecordId with status $claimed");
@@ -276,6 +280,7 @@ function findGiftCardData($pid, $gcToken) {
     // If no token was given, we can't find a reward
     if (empty($gcToken)) {
         $module->emError("ERROR: Empty gift card token $gcToken");
+        \REDCap::logEvent("ERROR: Empty gift card token $gcToken");
         $setupComplete = false;
     } else {
 
@@ -287,6 +292,7 @@ function findGiftCardData($pid, $gcToken) {
         $gclRecord = findGiftCardLibraryRecord($pid, $gclPid, $gcToken);
         if (empty($gclRecord)) {
             $module->emError("Gift card token $gcToken was not found in GC Library project $gclPid");
+            \REDCap::logEvent("Gift card token $gcToken was not found in GC Library project $gclPid");
             $setupComplete = false;
         } else {
 
@@ -298,6 +304,7 @@ function findGiftCardData($pid, $gcToken) {
             $module->emDebug("This is the config which holds this token: " . json_encode($gcConfig));
             if (empty($gcConfig)) {
                 $module->emError("Cannot find Gift Card Configuration titled " . json_encode($gclRecord['reward_name']));
+                \REDCap::logEvent("Cannot find Gift Card Configuration titled " . json_encode($gclRecord['reward_name']));
                 $setupComplete = false;
             } else {
                 // Now that we have the configuration, we can find the GC Project record to get the email address
@@ -327,6 +334,7 @@ function findGiftCardLibraryRecord($pid, $gcrPid, $gcToken) {
 
     if (empty($gclData)) {
         $module->emError("Could not find record with token $gcToken in project $gcrPid");
+        \REDCap::logEvent("Could not find record with token $gcToken in project $gcrPid");
     } else {
         $gclRecordId = array_keys($gclData)[0];
         if (empty($gclEventId)) {
@@ -391,6 +399,7 @@ function getProjectEmail($pid, $record_id) {
     }
     if (empty($email_eventID)) {
         $module->emError("Cannot find the event ID where the Email address resides: " . $gcConfig['reward-email']);
+        \REDCap::logEvent("Cannot find the event ID where the Email address resides: " . $gcConfig['reward-email']);
         return null;
     } else {
         $emailData = REDCap::getData($pid, 'array', array($record_id), array($fieldWithEmail), array($email_eventID));
@@ -428,6 +437,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
 
     if ($setupComplete === false) {
         $module->emError("Cannot send email to " . $emailAddress . ", because token " . $gcToken . " cannot be found.");
+        \REDCap::logEvent("Cannot send email to " . $emailAddress . ", because token " . $gcToken . " cannot be found.");
         return false;
     } else {
 
@@ -456,11 +466,13 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
             $gcProjDD = new Project($gclPid, true);
         } catch (Exception $ex) {
             $module->emError("Cannot access Project variables for Gift Card Library project pid=" . $gclPid . ", Error: " . $ex->getMessage());
+            \REDCap::logEvent("Cannot access Project variables for Gift Card Library project pid=" . $gclPid ," Error: " . $ex->getMessage());
             return $status;
         }
 
         if (empty($gcProjDD) || empty($gcProjDD->metadata)) {
             $module->emError("No project data dictionary for pid=" . $gclPid);
+            \REDCap::logEvent("No project data dictionary for pid=" . $gclPid);
         } else {
 
             // If the field reward_email_addr exists, save the email address where we sent the reward email message

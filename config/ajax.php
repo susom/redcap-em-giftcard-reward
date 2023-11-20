@@ -39,6 +39,7 @@ if (!empty($_POST['action'])) {
 
             } catch (Exception $ex) {
                 $module->emError('Exception when verifying Gift Card library in verifyGiftCardRepo');
+                \REDCap::logEvent('Exception when verifying Gift Card library in verifyGiftCardRepo');
             }
             [$resultProj,$messageProj] = $module->verifyEMConfigs( $module->getProjectId(), $gcrPid, $gcrEventID, $instances );
 

@@ -54,9 +54,11 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             [$validLib, $messageLib] = $gclib->verifyLibraryConfig();
             if (!$validLib) {
                 $this->emError($messageLib);
+                \REDCap::logEvent($messageLib);
             }
         } catch (Exception $ex) {
-            $this->emError("Exception catch verifying Gift Card Library");
+            $this->emError("Exception catch verifying Gift Card Library ". $ex->getMessage());
+            \REDCap::logEvent("Exception catch verifying Gift Card Library", $ex->getMessage());
         }
 
         // Retrieve Gift Card configurations
@@ -66,6 +68,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         [$validConfig, $mesageConfig] = $this->verifyEMConfigs($project_id, $gcr_pid, $gcr_event_id, $instances);
         if (!$validConfig) {
             $this->emError($mesageConfig);
+            \REDCap::logEvent($mesageConfig);
         }
     }
 
@@ -128,11 +131,13 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
                         } else {
                             $message .= "<br>ERROR: Reward for [PID:$project_id] record $record for " . $config_info["reward-title"] . " reward was not processed.";
                             $this->emError($message);
+                            \REDCap::logEvent($message);
                         }
                     }
                 } else {
                     $message = "[PID:" . $project_id . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate for records!";
                     $this->emError($message);
+                    \REDCap::logEvent($message);
                 }
            }
         }
@@ -201,10 +206,12 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
                 if ($result === false) {
                     $overallStatus = $result;
                     $this->emError("Errors with instance " . ($i + 1), $message);
+                    \REDCap::logEvent("Errors with instance " . ($i + 1), $message);
                     $errors[] = '<b>Gift Card config ' . ($i + 1) . ' has error message:</b> ' . $message;
                 }
             } catch (Exception $ex) {
                 $this->emError("Cannot instantiate the Reward Instance with error: " . json_encode($ex));
+                \REDCap::logEvent("Cannot instantiate the Reward Instance with error: " , json_encode($ex));
             }
         }
 
@@ -229,6 +236,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
             // library event id is not set and cannot be determined
             $this->emError("Gift Card Library has more than 1 event - select one through the External Module Configuration");
+            \REDCap::logEvent("Gift Card Library has more than 1 event - select one through the External Module Configuration");
             $lib_event_id = null;
 
         } else {
@@ -276,6 +284,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $this->emDebug("Calling cron Daily Summary for project $proj_id at URL " . $dailySummaryURL);
 
             // Call the project through the API so it will be in project context
+            // TODO replace http_get with guzzle
             $response = http_get($dailySummaryURL);
             $this->emDebug("Completed Daily Summary for project $proj_id");
         }
@@ -305,6 +314,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $this->emDebug("Calling cron ProcessCron for project $proj_id at URL " . $processCronURL);
 
             // Call the project through the API so it will be in project context.
+            // TODO replace http_get with guzzle
             $response = http_get($processCronURL);
             $this->emDebug("Completed ProcessCron for project $proj_id");
         }

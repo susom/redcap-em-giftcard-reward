@@ -47,10 +47,12 @@ try {
 
     if (!$valid) {
         $module->emError($message);
+        \REDCap::logEvent($message);
         return;
     }
 } catch (Exception $ex) {
     $module->emError("Exception verifying Gift Card Library (pid=" . $gcr_pid . ") for project $pid - cannot create Daily Summary", $ex->getMessage());
+    \REDCap::logEvent("Exception verifying Gift Card Library (pid=" . $gcr_pid . ") for project $pid - cannot create Daily Summary", $ex->getMessage());
     return;
 }
 
@@ -177,6 +179,7 @@ function retrieveSummaryData($config, $gcr_pid, $gcr_event_id) {
 
     } else {
         $module->emError("No data was found for DailySummary from gc library [pid:$gcr_pid/event id:$gcr_event_id]");
+        \REDCap::logEvent("No data was found for DailySummary from gc library [pid:$gcr_pid/event id:$gcr_event_id]");
     }
 
     $results = array(

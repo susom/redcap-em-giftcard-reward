@@ -8,7 +8,7 @@ use \REDCap;
 // HANDLE BUTTON ACTION
 if (!empty($_POST['action'])) {
 
-    $action = filter_var($_POST['action'], FILTER_SANITIZE_STRING);
+    $action = htmlspecialchars($_POST['action'],);
     //$zip_loader = InsertInstrumentHelper::getInstance($module);
     //$module->emLog($_POST);
     $message = $delay = $callback = null;
@@ -34,7 +34,7 @@ if (!empty($_POST['action'])) {
             // For this module, we want the subsettings of 'instance' - the repeating block of config
             $instances = $module->parseSubsettingsFromSettings('rewards', $data);
             try {
-                $gclib = new VerifyLibraryClass($gcrPid, $gcrEventID, $module);
+                $gclib = $module->getVerifyLibraryClass($gcrPid, $gcrEventID, $module);
                 [$resultLib, $messageLib] = $gclib->verifyLibraryConfig();
 
             } catch (Exception $ex) {
@@ -70,12 +70,18 @@ if (!empty($_POST['action'])) {
 
     header('Content-Type: application/json');
     echo json_encode(
-        filter_var_array ( array(
+        array(
             'result' => $result,
             'message' => $message,
             'callback' => $callback,
             'delay'=> $delay
-        ), FILTER_SANITIZE_STRING)
+        )
+//        filter_var_array ( array(
+//            'result' => $result,
+//            'message' => $message,
+//            'callback' => $callback,
+//            'delay'=> $delay
+//        ), FILTER_SANITIZE_STRING)
     );
     exit();
 

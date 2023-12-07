@@ -31,11 +31,13 @@ if ($action == "process") {
     foreach($post_values as $config => $records) {
 
         $selected_config = array();
-        foreach($configs as $one_config) {
+        $select_index = null;
+        foreach($configs as $index => $one_config) {
             $label_nospace = str_replace(' ', '-', $one_config['reward-title']);
             $label_name = $label_nospace . '^' . 'records';
             if ($config == $label_name) {
                 $selected_config = $one_config;
+                $select_index = $index;
                 break;
             }
         }
@@ -43,7 +45,7 @@ if ($action == "process") {
         // Process this config for the selected records to send out the gift cards
         try {
             $batch_message = '';
-            $GCInstance = new RewardInstance($module, $pid, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $selected_config);
+            $GCInstance = $module->getRewardInstance($select_index, $module, $pid, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $selected_config);
             $GCInstance->verifyConfig();
 
             foreach ($records as $record) {
@@ -83,7 +85,7 @@ foreach ($configs as $configNum => $config) {
     if (!empty($config['batch-processing']) and (empty($config['dont-send-email']))) {
 
         // Look for records that are ready for gift cards using the logic in the configuration
-        $batchProc = new BatchProcessingInstance($pid, $config);
+        $batchProc = new BatchProcessingInstance($pid, $config, $configNum);
         $configHtml = $batchProc->returnConfigHtml();
     }
     $finalHtml .= $configHtml;

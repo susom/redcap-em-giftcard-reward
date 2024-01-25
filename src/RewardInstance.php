@@ -10,7 +10,7 @@ require_once "src/VerifyLibraryClass.php";
 
 class RewardInstance
 {
-    /** @var \Stanford\GiftcardReward\GiftcardReward $module */
+    /** @var GiftcardReward $module */
 
     private $title, $logic, $fk_field, $fk_event_id, $gc_status, $amount,
         $email, $email_subject, $email_header, $email_verification,
@@ -18,7 +18,7 @@ class RewardInstance
         $email_from, $email_address, $email_event_id, $alert_email,
         $cc_verification_email, $cc_reward_email, $cc_email,
         $brand_field, $brand_name, $project_id, $brand_options,
-        $dont_send_email, $reward_url_field;
+        $dont_send_email, $reward_url_field, $reward_number_field;
     private $optout_low_balance, $low_balance_number, $allow_multiple_rewards;
     private $gcr_pid, $gcr_event_id, $gcr_pk, $pid;
     private $module, $lock_name;
@@ -42,6 +42,7 @@ class RewardInstance
         $this->amount                       = $instance['reward-amount'];
         $this->brand_field                  = $instance['brand-field'];
         $this->reward_url_field             = $instance['reward-url'];
+        $this->reward_number_field          = $instance['reward-number-field'];
         $this->dont_send_email              = $instance['dont-send-email'];
 
         // These are reward email parameters
@@ -166,6 +167,8 @@ class RewardInstance
                 }
             }
         }
+
+        //$this->module->emDebug("Email_event_id", $this->email_event_id);
 
         // There can only be one email field for each project so it cannot be located on a repeating form or in
         // a repeating event
@@ -475,7 +478,7 @@ class RewardInstance
         // we will be sending them email about this participant so don't send another email here.
         if (!$this->optout_low_balance and !empty($this->low_balance_number) and
                 (count($data) <= $this->low_balance_number) and (count($data) > 0)) {
-            $emailBody = "There are " . (count($data)-1) . " rewards available for gift card configuation " . $this->title;
+            $emailBody = "There are " . (count($data)-1) . " rewards available for gift card configuration " . $this->title;
             if (!empty($this->brand_field)) {
                 $emailBody .= " for brand " . $this->brand_name;
             }
@@ -547,7 +550,7 @@ class RewardInstance
             $projData = REDCap::getData($this->project_id, 'array', null, array($this->email_address), null,
                 null, null, null, null, $projFilter);
             if (!empty($projData)) {
-                $message = "Duplicate email addresss $this->email_address for reward $this->title and record $record_id";
+                $message = "Duplicate email address $this->email_address for reward $this->title and record $record_id";
 
                 // Update the status for this record to say they were not sent a reward because it is a duplicate
                 $record[$record_id][$this->fk_event_id][$this->gc_status] = 'Duplicate email';
@@ -634,6 +637,10 @@ class RewardInstance
             if (!empty($this->reward_url_field)) {
                 $record[$record_id][$this->fk_event_id][$this->reward_url_field] = $reward_url;
             }
+            if (!empty($this->reward_number_field)) {
+                $record[$record_id][$this->fk_event_id][$this->reward_number_field] = $gcr_record_code;
+            }
+
             $err_msg = "Problem saving Gift Card project updates for record $gcr_record_id in project $this->project_id";
             $message .= $this->saveGCData($this->project_id, 'array', $record, $err_msg);
 

@@ -2,45 +2,39 @@
 
 This module will automate the dispersement of gift cards for use in projects offering incentive rewards.
 
-This module requires two REDCap projects: 1) the project where study data is stored (study project), and 2) a gift card library 
-repository project where gift cards are loaded for dispersement (library project).  These two projects work in tandem to disperse
-gift cards at the proper time as specified by logic in the configuration file.  The gift card library project can be used for more
-than one gift card study project.
+This module requires two REDCap projects: 1) the project where study data is stored (study project), and 2) a gift card
+library repository project where gift cards are loaded for dispersement (library project).  These two projects work in 
+tandem to disperse gift cards at the proper time as specified by logic in the configuration file.  The gift card library
+project can be used for more than one gift card study project.
 
 The module must be enabled for the study project (not the gift card library). 
 
 ## Background
-Many research studies offer incentives to participants, in the form of gift cards, at different time points. Tracking and distribution of the gift cards can be a 
-very time-consuming task, especially with remote participants. To help alleivate the burdon of tracking eligible participants and facilitate distribution of the
+Many research studies offer incentives to participants, in the form of gift cards, at different time points. Tracking 
+and distribution of the gift cards can be a very time-consuming task, especially with remote participants. To help 
+alleviate the burden of tracking eligible participants and facilitate distribution of the
 gift cards, this External Module was created.  This module also helps with gift card reporting for study administration.
 
 ## Overview
-This EM allows multiple configurations to be setup for each timepoint when gift cards can be rewarded. Each configuration
-allows logic to be evaluated to determine when a participant is eligible and specifies the type and denomination of
-the gift card.  
+This EM allows multiple configurations (e.g. instances) to be setup to enable more than one different gift card event
+in a given project.  Each configuration uses a logical expression to determine when a participant is eligible combined
+with the type and amount of the gift card to be sent.
 
 There are several types of configurations which are supported as described below:
 
 1. When a participant is determined to be eligible for a reward, they will be sent a customizable email to let them know they received
-an award with a personalized link.  Once they click on the link in the email, the gift card information, needed to redeem the reward,
-will be displayed to them on a webpage. There is an option to send this information to an email address - either theirs or someone elses from the webpage.
+an award.  The email contains a link which they must click through to view the gift card information (and redeem the gift).  There is an option to send the actual giftcard information to an email address (either the one used for verification or another email).
 2. Gift cards can be filtered by Brands. Each participant may select the type of gift card they would like.  In order to use this
-feature, the brand field needs to be specified in the EM config file.
-3. Sending out gift cards in batch mode is supported.  If you would like to save up records eligible for rewards and send them out at the same time, then batch mode can be selected
-in the EM config.  In this mode, gift cards will NOT be sent when a record is saved, instead an EM webpage is provided so display the
-records that are eligible for an award. You are allowed to select which records you want to send gift cards to.
-4. Normally the eligibility logic is determined when the record is saved.  There may be some situations where you will not want to
-manually save the record and want the logic to be calculated on a cron.  When the logic contains a datediff calculation, you can select the
-cron to evaluate the logic on a daily basis.  For instance, this mode is useful when sending gift cards on birthdays. In the eligibility
-logic, you can set up a datediff to deterine if today is the participant's birthday and if so, send out a gift card.
+feature, the brand field needs to be specified in the EM config file.  This would be used if you want to allow the participant to select, for example, from a target or an amazon gift card.
+3. Sending out gift cards normally happens in realtime when the logic determines a record to be eligible.  However, if you would like, you can instead use a batch mode where the gift cards are sent in batch at a later time.  In this mode, gift cards will NOT be sent when a record is saved, instead an EM webpage is provided so display the records that are eligible for an award. You are allowed to select which records you want to send gift cards to.
+4. Normally the eligibility logic is determined when the record is saved.  There may be some situations where you need to evaluate the logic without a save event (such as when logic includes datediff or after a bulk import).  You can evaluate logic against all records using a cron-task on a daily basis.  For instance, this mode may useful when sending gift cards on birthdays.  In the eligibility
+logic, you can set up a datediff to determine if today is the participant's birthday and if so, send out a gift card.
 5. The last mode can be used to support anonymous surveys.  Since the email address of a participant is not known or desired to be
 saved in the project, you can select to have the URL to the gift card saved in the project and displayed to users after
 completing an anonymous survey.
 
 ## How does it work?
-This module is designed to evaluate configuration specific logic (based on REDCap field values) when a record is saved. When the logic becomes true, a reward is
-processed for the participant. The reward processing consists of looking for an available gift card in the library project, reserving that gift card in the
-library project and notifying the participant via email that they were awarded a gift card. The gift card library record gift card
+This module is designed to evaluate configuration specific logic (based on REDCap field values) when a record is saved.  When the logic becomes true, a reward is processed for the participant. The reward processing consists of looking for an available gift card in the library project, reserving that gift card in the library project and notifying the participant via email that they were awarded a gift card. The gift card library record gift card
 status will be set to 'Reserved' with a timestamp. 
 
 The configuration file specifies a gift card denomination to give for each timepoint and gift cards can be filtered by brand.
@@ -54,10 +48,9 @@ uses the same gift card library), record in the study project that is being awar
 gift card codes were sent. 
 
 The study project will save the 'Reserved' status of the gift card and the record of the library project which contains the reward being sent to this
-participant. Enough information is saved in the library and study projects to easily manuver back and forth between the two projects.
+participant. Enough information is saved in the library and study projects to easily maneuver back and forth between the two projects.
 
 ## Participant View
-
 Once a participant reaches a reward milestone, they will receive an email with customizable text. At the bottom of the email a link to a webpage that
 will display their reward is inserted. This email text is specified in the External Module configuration file and can use piping for personalization.
 
@@ -67,17 +60,14 @@ reward code will be stored in the library project.
 
 ## Features
 This module is able to send multiple rewards per project.  For instance, if your study grants a reward after filling out a Baseline
-Questionnaire, after Week 3 and at the end of the study, each of these reward timeframes can be setup in the gift card External Module configuration. There
-are no limits to the number of rewards one study project can gift.  Each reward configuration must use the same library project.
+Questionnaire, after Week 3 and at the end of the study, each of these reward timeframes can be setup in the gift card External Module configuration. There are no limits to the number of rewards one study project can gift.  Each reward configuration must use the same library project.
 
 Unless a project opts out, there is a daily summary that is sent to the Alert Email address which summarizes the status of the gift card
 dispersement for the previous day.  If more than one configuration is setup for a study project, one email will be sent summarizing all
 configuration setups.
 
 Some projects may want the ability to time limit the availability of the rewards.  For instance, you can make the award valid for 7 days. 
-After the time has elapsed, you can reset the reward so the participant loses the ability to see the reward information.  This scenario can be accomplished when using 
-gift codes (not links to gift codes) by resetting awards that are in 'Reserved' status back to 'Ready' status.
-
+After the time has elapsed, you can reset the reward so the participant loses the ability to see the reward information.  This scenario can be accomplished when using gift codes (not links to gift codes) by resetting awards that are in 'Reserved' status back to 'Ready' status.
 
 ## Setup
 

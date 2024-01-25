@@ -49,7 +49,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
         // First check the Gift Card Library to see if it is valid
         try {
-
             $gclib = new VerifyLibraryClass($gcr_pid, $gcr_event_id, $this);
             [$validLib, $messageLib] = $gclib->verifyLibraryConfig();
             if (!$validLib) {
@@ -87,7 +86,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * @param null $response_id
      * @param $repeat_instance
      */
-    public function redcap_save_record($project_id, $record = NULL,  $instrument,  $event_id,  $group_id = NULL,  $survey_hash = NULL,  $response_id = NULL, $repeat_instance) {
+    public function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance) {
 
         // Return the Reward configurations
         $gc_pid = $this->getProjectSetting("gcr-pid");

@@ -13,13 +13,14 @@ class RewardInstance
     /** @var GiftcardReward $module */
 
     private $title, $logic, $fk_field, $fk_event_id, $gc_status, $amount,
-        $email, $email_subject, $email_header, $email_verification,
+        $email_field, $email_subject, $email_header, $email_verification,
         $email_verification_subject, $email_verification_header,
-        $email_from, $email_address, $email_event_id, $alert_email,
+        $email_from, $email_address, $alert_email,
         $cc_verification_email, $cc_reward_email, $cc_email,
         $brand_field, $brand_name, $project_id, $brand_options,
         $dont_send_email, $reward_url_field, $reward_number_field;
-    private $optout_low_balance, $low_balance_number, $allow_multiple_rewards;
+    private $email_event_id;    // Calculated...
+    private $optout_low_balance, $low_balance_number, $allow_multiple_rewards, $allow_multiple_rewards_limited;
     private $gcr_pid, $gcr_event_id, $gcr_pk, $pid;
     private $module, $lock_name;
     private $gcr_proj;
@@ -45,23 +46,26 @@ class RewardInstance
         $this->reward_number_field          = $instance['reward-number-field'];
         $this->dont_send_email              = $instance['dont-send-email'];
 
-        // These are reward email parameters
-        $this->cc_reward_email              = $instance['cc-reward-email'];
-        $this->email                        = $instance['reward-email'];
-        $this->email_from                   = $instance['reward-email-from'];
-        $this->email_subject                = $instance['reward-email-subject'];
-        $this->email_header                 = $instance['reward-email-header'];
-        $this->cc_verification_email        = $instance['cc-verification-email'];
-        $this->email_verification           = $instance['reward-email-verification'];
-        $this->email_verification_subject   = $instance['reward-email-verification-subject'];
-        $this->email_verification_header    = $instance['reward-email-verification-header'];
-        $this->alert_email                  = $alert_email;
-        $this->cc_email                     = $cc_email;
+        // These are reward email/display parameters
+        $this->cc_reward_email                = $instance['cc-reward-email'];
+        $this->email_field                    = $instance['reward-email'];
+        $this->email_from                     = $instance['reward-email-from'];
+        $this->email_subject                  = $instance['reward-email-subject'];
+        $this->email_header                   = $instance['reward-email-header'];
+        $this->cc_verification_email          = $instance['cc-verification-email'];
+        $this->email_verification             = $instance['reward-email-verification'];
+        $this->email_verification_subject     = $instance['reward-email-verification-subject'];
+        $this->email_verification_header      = $instance['reward-email-verification-header'];
+        $this->alert_email                    = $alert_email;
+        $this->cc_email                       = $cc_email;
 
         // These are gift card options
-        $this->optout_low_balance           = $instance['optout-low-balance'];
-        $this->low_balance_number           = $instance['low-balance-number'];
-        $this->allow_multiple_rewards       = $instance['allow-multiple-rewards'];
+        $this->optout_low_balance             = $instance['optout-low-balance'];
+        $this->low_balance_number             = $instance['low-balance-number'];
+        $this->allow_multiple_rewards         = $instance['allow-multiple-rewards'];
+        $this->allow_multiple_rewards_limited = $instance['allow-multiple-rewards-limited'];
+
+        $this->email_event_id = $this->getEmailEventId();
 
         try {
             // Retrieve data dictionary of library project
@@ -90,6 +94,44 @@ class RewardInstance
     }
 
 
+    private function getEmailEventId() {
+        global $Proj;
+
+        // We know the field name, find its form.
+        $email_event_id = null;
+        if (empty($this->email_field)) return null;
+
+        $metaData = $this->module->getMetadata($this->project_id);
+        $email_form = $metaData[$this->email_field]['form_name'];
+
+        // Get events to check
+        $events_to_check = array();
+        if ($Proj->numArms > 1) {
+            // There is more than one arm so find the arm that the other fields are in
+            // and make sure that arm only has one email field
+            foreach($Proj->events as $arm => $info) {
+                $events_in_arm = array_keys($info['events']);
+                if (in_array($this->fk_event_id, $events_in_arm)) {
+                    $events_to_check = $events_in_arm;
+                }
+            }
+        } else {
+            $events_to_check = array_keys($Proj->eventsForms);
+        }
+
+        // Check through the events in this arm to make sure there is only one email field
+        foreach($events_to_check as $event_id) {
+            $form_list = $Proj->eventsForms[$event_id];
+            if (in_array($email_form, $form_list)) {
+                if (is_null($email_event_id)) {
+                    // First match
+                    $email_event_id = $event_id;
+                }
+            }
+        }
+        return $email_event_id;
+    }
+
     /**
      * Verify the gift card project configuration and return an array of ($result, $message)
      * where $result = true/false
@@ -108,10 +150,14 @@ class RewardInstance
         $message = $this->checkForEmptyField($this->logic, "Reward Logic", $message);
         $message = $this->checkForEmptyField($this->fk_field, "Reward ID Field", $message);
         $message = $this->checkForEmptyField($this->gc_status, "Reward ID Status Field", $message);
-        $message = $this->checkForEmptyField($this->email, "Reward Email Address Field", $message);
-        $message = $this->checkForEmptyField($this->email_from, "Email From Address", $message);
+
+        if ( ! $this->dont_send_email) {
+            $message = $this->checkForEmptyField($this->email_field, "Reward Email Address Field", $message);
+            $message = $this->checkForEmptyField($this->email_from, "Email From Address", $message);
+            $message = $this->checkForEmptyField($this->email_verification_subject, "Verification Email Subject", $message);
+        }
+
         $message = $this->checkForEmptyField($this->email_subject, "Reward Email Subject", $message);
-        $message = $this->checkForEmptyField($this->email_verification_subject, "Verification Email Subject", $message);
 
         if ($message !== '') {
             $message = "<li>" . $message . "</li>";
@@ -135,10 +181,10 @@ class RewardInstance
         }
 
         // The email address does not need to be in the same event as the gift card fields so look for it.
-        // If this is a multi-arm project, make sure it is in only one event for this arm although it might be
+        // If this is a multi-arm project, make sure it is in only one event for this arm, although it might be
         // in every arm.
         $this->email_event_id = null;
-        $email_form = $metaData[$this->email]['form_name'];
+        $email_form = $metaData[$this->email_field]['form_name'];
 
         $events_to_check = array();
         if ($Proj->numArms > 1) {
@@ -276,7 +322,8 @@ class RewardInstance
                 $this->module->emError("This email event ID is null so cannot find the email address.");
                 $status = false;
             } else {
-                $this->email_address = $data[$record][$this->email_event_id][$this->email];
+                $this->email_event_id = intval($this->email_event_id);
+                $this->email_address = $data[$record][$this->email_event_id][$this->email_field];
             }
 
             // If the fk_field field is not blank, a gc has already been issued
@@ -344,7 +391,7 @@ class RewardInstance
         $valid = false;
 
         // Check to see if this participant has already been rewarded a gift card. If so, don't
-        // send another one unless the configuation checkbox was selected that it is okay to send.
+        // send another one unless the configuration checkbox was selected that it is okay to send.
         [$valid, $message] = $this->checkForPreviousReward($record_id);
         if (!$valid) {
 
@@ -536,12 +583,13 @@ class RewardInstance
         // is checked that allows an email to receive multiple rewards.
         if (REDCap::isLongitudinal()) {
             $event_names = REDCap::getEventNames(true, false);
+            $this->email_event_id = intval($this->email_event_id);
 
-            $projFilter = "[" . $event_names[$this->email_event_id] . "][" . $this->email . "] = '" . $this->email_address . "'" .
+            $projFilter = "[" . $event_names[$this->email_event_id] . "][" . $this->email_field . "] = '" . $this->email_address . "'" .
                 " and (([" . $event_names[$this->fk_event_id] . "][". $this->gc_status . "] = 'Reserved')" .
                 " or ([" . $event_names[$this->fk_event_id] . "][" . $this->gc_status . "] = 'Claimed'))";
         } else {
-            $projFilter = "[" . $this->email . "] = '" . $this->email_address . "'" .
+            $projFilter = "[" . $this->email_field . "] = '" . $this->email_address . "'" .
                 " and (([". $this->gc_status . "] = 'Reserved')" .
                 " or ([" . $this->gc_status . "] = 'Claimed'))";
         }
@@ -563,6 +611,7 @@ class RewardInstance
 
         return [true, null];
     }
+
 
     /**
      * The recipient is eligible for a reward so email them their verification email.

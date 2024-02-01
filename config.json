@@ -3,7 +3,7 @@
 
   "namespace":"Stanford\\GiftcardReward",
 
-  "description": "Automate the email of giftcards to eligible recipients",
+  "description": "Automate the email of gift cards to eligible recipients",
 
   "versions": [
     { "1.0.0": "Initial",
@@ -15,7 +15,8 @@
       "1.1.0": "Ability to inhibit emails and customize gift card display",
       "2.0.0": "Add internationalization",
       "3.0.0": "Change to use DB Internal Lock/Release functions.  Added additional messages when gift cards cannot be reserved",
-      "3.1.0": "Changed framework to 10"
+      "3.1.0": "Changed framework to 10",
+      "3.2.0": "Added additional customization of giftcard display and emails"
     }
   ],
   "compatibility": {
@@ -354,7 +355,7 @@
         },
         {
           "key": "allow-multiple-rewards-limited",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Limit Rewards to One/Title/Email</span></h6>This is a new feature added to allow one multiple reward instances but limit each instance to one per email",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'><TODO>Limit Rewards to One/Title/Email</span></h6>This is a feature in progress and has not been implemented fully.  If you need this, please post a request to the github site for the module.  Currently, it does not function",
           "required": false,
           "type": "checkbox"
         },

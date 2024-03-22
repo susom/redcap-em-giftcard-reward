@@ -500,11 +500,11 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
         <link rel="stylesheet" href="<?php echo $module->getUrl("./css/DisplayReward.css",true,true); ?>" />
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"/>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css"/>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <style>
             html {background-color: <?php echo $headerFooterColor; ?>}
             .logo {background-color: <?php echo $headerFooterColor; ?>}
@@ -567,7 +567,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
 
             </div>   <!-- end row -->
         </div>  <!-- end container -->
-
+        <div class="loader"><!-- Place at bottom of page --></div>
     </body>
 </html>
 
@@ -602,7 +602,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
 
     // Make the API call back to the server to send reward email to the entered address
     GiftcardReward.send_email = function(emailAddr, token) {
-
+        $body = $("body");
         $.ajax({
             type: "GET",
             datatype: "html",
@@ -617,12 +617,19 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
                 } else {
                     document.getElementById("notsent").style.display = "inline";
                 }
+            },
+            beforeSend:function (status) {
+                $body.addClass("loading");
+                console.log("Before Send: " + status);
             }
         }).done(function (status) {
+            $body.removeClass("loading");
             console.log("Return from GiftcardReward: " + status);
         }).fail(function (jqXHR, textStatus, errorThrown) {
+            $body.removeClass("loading");
             console.log("Failed in GiftcardReward");
         });
     };
+
 
 </script>

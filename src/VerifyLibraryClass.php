@@ -19,7 +19,8 @@ class VerifyLibraryClass
             $this->gcr_proj = new Project($gcr_pid);
             $this->gcr_proj->setRepeatingFormsEvents();
         } catch (Exception $ex) {
-            $this->module->emError("Cannot retrieve the Gift Card Library data dictionary!");
+            $this->module->emError("Cannot retrieve the Gift Card Library data dictionary! " . $ex->getMessage());
+            \REDCap::logEvent("Cannot retrieve the Gift Card Library data dictionary!" , $ex->getMessage());
             return false;
         }
 

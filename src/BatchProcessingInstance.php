@@ -8,17 +8,18 @@ class BatchProcessingInstance
 {
     /** @var \Stanford\GiftcardReward\GiftcardReward $module */
 
-    private $pid, $config, $config_event_id, $event_name, $config_name;
+    private $pid, $config, $config_event_id, $event_name, $config_name, $configNum;
     private $field_display_list, $pk_field, $label, $message;
     private $reward_logic;
 
-    public function __construct($pid, $config)
+    public function __construct($pid, $config, $configNum)
     {
         global $Proj, $module;
 
         // These are required gift card parameters in the gift card project
         $this->pid = $pid;
         $this->config   = $config;
+        $this->configNum   = $configNum;
 
         // Retrieve the config name and event name
         $this->config_name = $this->config['reward-title'];
@@ -51,6 +52,7 @@ class BatchProcessingInstance
             } else {
                 $this->message = "Field trim($field_name) cannot be displayed because it is not in this event (event_id = $this->config_event_id)";
                 $module->emError($this->message);
+                \REDCap::logEvent($this->message);
             }
         }
 
@@ -127,7 +129,7 @@ class BatchProcessingInstance
 
 
     private function getRecordsReadyForGCs() {
-
+        /** @var \Stanford\GiftcardReward\GiftcardReward $module */
         global $module;
 
         // Get the record_id and the fields that the user wants displayed
@@ -154,10 +156,12 @@ class BatchProcessingInstance
         // These are the records that meet the reward logic but run it through checkRewardStatus
         // to make sure it meets all other requirements that it is okay to send
         try {
-           $gcInstance = new RewardInstance($module, $this->pid, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $this->config);
+
+           $gcInstance = $module->getRewardInstance($this->configNum, $module, $this->pid, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $this->config);
         } catch (Exception $ex) {
             $this->message .= "<br>Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage();
             $module->emError($this->message);
+            \REDCap::logEvent($this->message);
             return null;
         }
 
@@ -179,6 +183,7 @@ class BatchProcessingInstance
         } else {
             $message = "[PID:" . $this->pid . "] Reward configuration " . $this->config_name . " is invalid so cannot evaluate for records!";
             $module->emError($message);
+            \REDCap::logEvent($message);
             return null;
         }
 

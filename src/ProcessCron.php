@@ -37,16 +37,18 @@ foreach($configs as $config_num => $config_info) {
         $module->emDebug("Running through LogicChecker for project $pid and config " . ($config_num+1) . " with title " . $config_info["reward-title"]);
         // Instantiate a reward instance and make sure the config is valid. We only need to do this once.
         try {
-            $reward = new RewardInstance($module, $pid, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
+            $reward = $module->getRewardInstance($config_num, $module, $pid, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
             $status = $reward->verifyConfig();
             if (!$status) {
                 $message = "[Processing cron PID:" . $pid . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate record logic!";
                 $module->emError($message);
+                \REDCap::logEvent($message);
                 return;
             }
 
         } catch (Exception $ex) {
             $module->emError("Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage());
+            \REDCap::logEvent("Cannot create instance of class RewardInstance. Exception message: " , $ex->getMessage());
             return;
         }
 
@@ -74,6 +76,7 @@ foreach($configs as $config_num => $config_info) {
                 } else {
                     $message .= "<br>ERROR: Reward for [PID:$pid] record $record_id for " . $config_info["reward-title"] . " reward was not processed.";
                     $module->emError($message);
+                    \REDCap::logEvent($message);
                 }
             }
         }

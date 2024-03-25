@@ -28,29 +28,18 @@
 
   "authors": [
     {
-      "name": "Andrew Martin",
-      "email": "andy123@stanford.edu",
+      "name": "Ihab Zeedia",
+      "email": "ihabz@stanford.edu",
       "institution": "Stanford University"
     },
     {
-      "name": "Lee Ann Yasukawa",
-      "email": "yasukawa@stanfordhealthcare.org",
-      "institution": "Stanford Health Care"
-    },
-    {
-      "name": "Ihab Zeedia",
-      "email": "ihabz@stanford.edu",
+      "name": "Jae Lee",
+      "email": "jael@stanford.edu",
       "institution": "Stanford University"
     }
   ],
 
-  "framework-version": 10,
-
-  "permissions": [
-    "redcap_save_record",
-    "redcap_module_save_configuration"
-  ],
-
+  "framework-version": 12,
   "links": {
     "control-center": [
     ],

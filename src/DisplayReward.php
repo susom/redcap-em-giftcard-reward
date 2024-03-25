@@ -7,9 +7,9 @@ use REDCap;
 use Project;
 use Exception;
 
-$gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? filter_var($_GET['reward_token'], FILTER_SANITIZE_STRING) : null;
+$gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? filter_var($_GET['reward_token'], FILTER_UNSAFE_RAW) : null;
 $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? filter_var($_GET['pid'], FILTER_SANITIZE_NUMBER_INT) : null;
-$action = isset($_GET['action']) && !empty($_GET['action']) ? filter_var($_GET['action'], FILTER_SANITIZE_STRING) : null;
+$action = isset($_GET['action']) && !empty($_GET['action']) ? filter_var($_GET['action'], FILTER_UNSAFE_RAW) : null;
 $emailAddr = isset($_GET['e_addr']) && !empty($_GET['e_addr']) ? filter_var($_GET['e_addr'], FILTER_SANITIZE_EMAIL) : null;
 $claimed = "Claimed";
 
@@ -191,7 +191,6 @@ function getGiftCardSummary() {
         $message .= $module->tt("challenge_code", $code) . "<br>";
     }
     $module->emDebug($message);
-
     return $message;
 }
 
@@ -347,6 +346,28 @@ function findGiftCardLibraryRecord($pid, $gcrPid, $gcToken) {
 
 
 /**
+ * @param $template
+ * @return array|string|string[]
+ */
+function getOverrideGiftCard($template) {
+    global $gclRecord, $gclRecordId, $gclEventId;
+    $record = $gclRecord[$gclRecordId][$gclEventId];
+
+    $s = [
+        '{{HEADER}}' => getGiftCardHeader(),
+        '{{SUBJECT}}' => getGiftCardSubject(),
+        '{{REWARD_NAME}}' => $record['reward_name'],
+        '{{REWARD_CODE}}' => $record['egift_number'],
+        '{{CHALLENGE_CODE}}' => $record['challenge_code'],
+        '{{BRAND}}' => $record['brand'],
+        '{{AMOUNT}}' => $record['amount']
+    ];
+    $override_body = str_replace(array_keys($s), array_values($s),$template);
+    return $override_body;
+}
+
+
+/**
  * This function will use the gift card reward name to find the configuration associated with this reward.
  *
  * @param $rewardName
@@ -455,6 +476,13 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
         $subject = getGiftCardSubject();
         $body = getGiftCardHeader() . "<br>" . giftCardDisplay();
 
+
+        // Add option to override the reward email body
+        if ($gcConfig['reward-display-override']) {
+            $override_template = $gcConfig['reward-display-override-template'];
+            $body = getGiftCardHeader() . "<br>" . getOverrideGiftCard($override_template);
+        }
+
         // Send the email to the address specified on the webpage.
         $status = REDCap::email($emailAddress, $fromEmail, $subject, $body, $ccRewardEmailAddr);
         $module->emDebug("Rewards email: To $emailAddress, From: $fromEmail, Subject: $subject, Body: $body, CC: $ccRewardEmailAddr, status: $status");
@@ -527,6 +555,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
 
                 <div class="col-6 pt-5">
 
+
                     <div class="border border-2">
                     <div class="col-12 text-light bg-dark p-3">
                         <?php echo getGiftCardSubject(); ?>
@@ -535,7 +564,14 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
                         <?php echo getGiftCardHeader(); ?>
                     </div>
                     <div class="col-12 p-2">
-                        <?php echo giftCardDisplay(); ?>
+                        <?php
+                            global $gcConfig;
+                            if ($gcConfig['reward-display-override']) {
+                                echo getOverrideGiftCard($gcConfig['reward-display-override-template']);
+                            } else {
+                                echo giftCardDisplay();
+                            }
+                         ?>
                     </div>
 
                     <?php if (!$dont_send_email) : ?>

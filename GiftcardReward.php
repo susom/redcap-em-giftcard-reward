@@ -4,6 +4,8 @@ namespace Stanford\GiftcardReward;
 
 use Exception;
 use ExternalModules\ExternalModules;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 require_once "emLoggerTrait.php";
 require_once "src/InsertInstrumentHelper.php";
@@ -29,9 +31,23 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
     use emLoggerTrait;
 
-    public function __construct() {
-        parent::__construct();
-    }
+    /**
+     * @var \Stanford\GiftcardReward\VerifyLibraryClass;
+     */
+    private $verifyLibraryClass;
+
+    /**
+     * @var \Stanford\GiftcardReward\RewardInstance[];
+     */
+    private $rewardInstance;
+
+    /**
+     * @var \GuzzleHttp\Client
+     */
+    private $guzzleClient;
+//    public function __construct() {
+//        parent::__construct();
+//    }
 
     /******************************************************************************************************************/
     /* HOOK METHODS                                                                                                   */
@@ -41,7 +57,8 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      *
      * @param $project_id - this project ID
      */
-    public function redcap_module_save_configuration($project_id) {
+    public function redcap_module_save_configuration($project_id)
+    {
 
         // Get GiftCard Repo Info
         $gcr_pid = $this->getProjectSetting('gcr-pid');
@@ -49,14 +66,15 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
         // First check the Gift Card Library to see if it is valid
         try {
-
-            $gclib = new VerifyLibraryClass($gcr_pid, $gcr_event_id, $this);
+            $gclib = $this->getVerifyLibraryClass($gcr_pid, $gcr_event_id, $this);
             [$validLib, $messageLib] = $gclib->verifyLibraryConfig();
             if (!$validLib) {
                 $this->emError($messageLib);
+                \REDCap::logEvent($messageLib);
             }
         } catch (Exception $ex) {
-            $this->emError("Exception catch verifying Gift Card Library");
+            $this->emError("Exception catch verifying Gift Card Library " . $ex->getMessage());
+            \REDCap::logEvent("Exception catch verifying Gift Card Library", $ex->getMessage());
         }
 
         // Retrieve Gift Card configurations
@@ -66,6 +84,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         [$validConfig, $mesageConfig] = $this->verifyEMConfigs($project_id, $gcr_pid, $gcr_event_id, $instances);
         if (!$validConfig) {
             $this->emError($mesageConfig);
+            \REDCap::logEvent($mesageConfig);
         }
     }
 
@@ -87,7 +106,8 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * @param null $response_id
      * @param $repeat_instance
      */
-    public function redcap_save_record($project_id, $record = NULL,  $instrument,  $event_id,  $group_id = NULL,  $survey_hash = NULL,  $response_id = NULL, $repeat_instance) {
+    public function redcap_save_record($project_id, $record = NULL, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance)
+    {
 
         // Return the Reward configurations
         $gc_pid = $this->getProjectSetting("gcr-pid");
@@ -96,7 +116,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $cc_email = $this->getProjectSetting("cc-email");
         $configs = $this->getSubSettings("rewards");
 
-        foreach ($configs as $config => $config_info) {
+        foreach ($configs as $index => $config_info) {
 
             // Check to see if this config should only be processed during batch processing.
             // If so, skip processing now.
@@ -105,7 +125,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
                 // Create a reward instance so we can process this record
                 try {
-                    $reward = new RewardInstance($this, $project_id, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
+                    $reward = $this->getRewardInstance($index, $this, $project_id, $gc_pid, $gc_event_id, $alert_email, $cc_email, $config_info);
                 } catch (Exception $ex) {
                     $this->emDebug("Cannot create instance of class RewardInstance. Exception message: " . $ex->getMessage());
                     return;
@@ -128,13 +148,15 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
                         } else {
                             $message .= "<br>ERROR: Reward for [PID:$project_id] record $record for " . $config_info["reward-title"] . " reward was not processed.";
                             $this->emError($message);
+                            \REDCap::logEvent($message);
                         }
                     }
                 } else {
                     $message = "[PID:" . $project_id . "] Reward configuration " . $config_info["reward-title"] . " is invalid so cannot evaluate for records!";
                     $this->emError($message);
+                    \REDCap::logEvent($message);
                 }
-           }
+            }
         }
     }
 
@@ -151,7 +173,8 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * @param $settings - retrieved list of subsettings from the html modal
      * @return array - the array of subsettings for each configuration
      */
-    public function parseSubsettingsFromSettings($key, $settings) {
+    public function parseSubsettingsFromSettings($key, $settings)
+    {
         $config = $this->getSettingConfig($key);
         if ($config['type'] !== "sub_settings") return false;
 
@@ -184,27 +207,30 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * @param null $cc_email = Email address to cc if setup in the configuration
      * @return array with overall status and an array of errors
      */
-    public function verifyEMConfigs($project_id, $gcr_pid, $gcr_event_id, $instances, $alert_email=null, $cc_email=null) {
+    public function verifyEMConfigs($project_id, $gcr_pid, $gcr_event_id, $instances, $alert_email = null, $cc_email = null)
+    {
 
         $errors = array();
         $overallStatus = true;
         if (is_null($alert_email)) $alert_email = $this->getProjectSetting("alert-email");
         if (is_null($cc_email)) $cc_email = $this->getProjectSetting("cc-email");
 
-        foreach ($instances as $i => $instance) {
+        foreach ($instances as $index => $instance) {
 
             // Create a new reward instance and verify the config
             try {
-                $ri = new RewardInstance($this, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
+                $reward = $this->getRewardInstance($index, $this, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
 
-                [$result, $message] = $ri->verifyConfig();
+                [$result, $message] = $reward->verifyConfig();
                 if ($result === false) {
                     $overallStatus = $result;
-                    $this->emError("Errors with instance " . ($i + 1), $message);
-                    $errors[] = '<b>Gift Card config ' . ($i + 1) . ' has error message:</b> ' . $message;
+                    $this->emError("Errors with instance " . ($index + 1), $message);
+                    \REDCap::logEvent("Errors with instance " . ($index + 1), $message);
+                    $errors[] = '<b>Gift Card config ' . ($index + 1) . ' has error message:</b> ' . $message;
                 }
             } catch (Exception $ex) {
                 $this->emError("Cannot instantiate the Reward Instance with error: " . json_encode($ex));
+                \REDCap::logEvent("Cannot instantiate the Reward Instance with error: ", json_encode($ex));
             }
         }
 
@@ -217,7 +243,8 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      *
      * @return BOOL (true if event id is valid otherwise false)
      */
-    public function checkGiftCardLibEventId($proj, $event_id) {
+    public function checkGiftCardLibEventId($proj, $event_id)
+    {
 
         // Make sure we have an event_id in the gift card rewards project
         if (!isset($event_id) && ($proj->numEvents === 1)) {
@@ -229,6 +256,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
 
             // library event id is not set and cannot be determined
             $this->emError("Gift Card Library has more than 1 event - select one through the External Module Configuration");
+            \REDCap::logEvent("Gift Card Library has more than 1 event - select one through the External Module Configuration");
             $lib_event_id = null;
 
         } else {
@@ -243,7 +271,8 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      *
      * @return array - required fields in the gift card library project
      */
-    public function getGiftCardLibraryFields() {
+    public function getGiftCardLibraryFields()
+    {
 
         // These are required fields for the gift card library project.  If any of these fields are not
         // present, we cannot continue.  We will give the option to upload a form with these fields.
@@ -261,13 +290,15 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
     /**
      * This function will be called by the Cron on a daily basis.  It will call DailySummary.php for each project that has
      * this EM enabled via an API call (so that the project context is setup).
+     * @throws GuzzleException
      */
-    public function giftCardDisplaySummaryCron() {
+    public function giftCardDisplaySummaryCron()
+    {
 
         // Find all the projects that are using the Gift Card Rewards EM
         $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 
-        while($row = $enabled->fetch_assoc()){
+        while ($row = $enabled->fetch_assoc()) {
 
             $proj_id = $row['project_id'];
 
@@ -276,7 +307,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $this->emDebug("Calling cron Daily Summary for project $proj_id at URL " . $dailySummaryURL);
 
             // Call the project through the API so it will be in project context
-            $response = http_get($dailySummaryURL);
+            $response = $this->getGuzzleClient()->get($dailySummaryURL);
             $this->emDebug("Completed Daily Summary for project $proj_id");
         }
     }
@@ -286,8 +317,10 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * that have selected the 'Enable Logic Check through Cron' checkbox in the gift card project configuration. For each
      * project, each record, that has not already sent out a gift card, will be checked to see if they are eligible.  If
      * the record is eligible, a gift card will be dispersed to them.
+     * @throws GuzzleException
      */
-    public function giftCardLogicCheck() {
+    public function giftCardLogicCheck()
+    {
 
         $this->emDebug("Starting Gift Card Logic Cron");
 
@@ -295,7 +328,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
         $enabled = ExternalModules::getEnabledProjects($this->PREFIX);
 
         //while($row = db_fetch_assoc($enabled)) {
-        while($row = $enabled->fetch_assoc()){
+        while ($row = $enabled->fetch_assoc()) {
 
             // Loop over each project where gift card is enabled
             $proj_id = $row['project_id'];
@@ -305,9 +338,183 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $this->emDebug("Calling cron ProcessCron for project $proj_id at URL " . $processCronURL);
 
             // Call the project through the API so it will be in project context.
-            $response = http_get($processCronURL);
+            $response = $this->getGuzzleClient()->get($processCronURL);
             $this->emDebug("Completed ProcessCron for project $proj_id");
         }
+
+
+    }
+
+    public function getVerifyLibraryClass($gcr_pid, $gcr_event_id, $module): VerifyLibraryClass
+    {
+        if (!$this->verifyLibraryClass) {
+            $this->setVerifyLibraryClass($gcr_pid, $gcr_event_id, $module);
+        }
+        return $this->verifyLibraryClass;
+    }
+
+    public function setVerifyLibraryClass($gcr_pid, $gcr_event_id, $module): void
+    {
+        $this->verifyLibraryClass = new VerifyLibraryClass($gcr_pid, $gcr_event_id, $module);
+    }
+
+    public function getRewardInstance($index, $module, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance): RewardInstance
+    {
+        if (is_null($index) or !$this->rewardInstance[$index]) {
+            $this->setRewardInstance($index, $module, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
+        }
+        // if no index provided then RewardInstance was added to the end of the method. otherwise return index object.
+        if (is_null($index)) {
+            return end($this->rewardInstance);
+        } else {
+            return $this->rewardInstance[$index];
+        }
+    }
+
+    public function setRewardInstance($index, $module, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance): void
+    {
+        if (is_null($index)) {
+            $this->rewardInstance[] = new RewardInstance($module, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
+        } else {
+            $this->rewardInstance[$index] = new RewardInstance($module, $project_id, $gcr_pid, $gcr_event_id, $alert_email, $cc_email, $instance);
+        }
+    }
+
+    public function getGuzzleClient(): \GuzzleHttp\Client
+    {
+        if (!$this->guzzleClient) {
+            $this->setGuzzleClient(new Client());
+        }
+        return $this->guzzleClient;
+    }
+
+    public function setGuzzleClient(\GuzzleHttp\Client $guzzleClient): void
+    {
+        $this->guzzleClient = $guzzleClient;
+    }
+
+
+    /**
+     * This function is called from the nightly cron for each gift card configuration that has not opted-out of receiving it.
+     * The gift card library will be checked for the following:
+     *          1) how many gift card rewards were sent in email yesterday
+     *          2) How many gift card rewards were viewed(claimed) yesterday
+     *          3) How many gift cards were sent > 7 days ago and have not been viewed
+     *          4) How many gift cards were sent < 7 days ago and have not been viewed
+     *          5) How many gift cards are still Ready to be awarded
+     *          6) How many gift cards in total have been awarded
+     *
+     * @return array
+     */
+    public function retrieveSummaryData($config, $gcr_pid, $gcr_event_id)
+    {
+
+        $rewards_sent_yesterday = 0;
+        $rewards_claimed_yesterday = 0;
+        $num_gc_sent_more_than_7days_ago = 0;
+        $num_gc_send_less_than_7days_ago = 0;
+        $num_gc_notready = 0;
+        $num_gc_available = 0;
+        $num_gc_awarded = 0;
+        $num_gc_claimed = 0;
+        $today = strtotime(date('Y-m-d'));
+
+        // Make sure we only retrieve the records that pertain to this configuration (based on gift card amount) and title
+        $filter = "[amount] = '" . $config['reward-amount'] . "'";
+
+        $data = \REDCap::getData($gcr_pid, 'array', null, null, $gcr_event_id, null, null, null, null, $filter);
+        if (!empty($data)) {
+            $brand_type = array();
+            foreach ($data as $record_id => $event_info) {
+                foreach ($event_info as $event_id => $record) {
+
+                    $status = $record['status'];
+                    if ($record['reward_name'] == $config['reward-title']) {
+                        // Convert timestamps so we can do date math
+                        $datetime_sent = strtotime(date($record['reserved_ts']));
+                        $date_sent = strtotime(date("Y-m-d", $datetime_sent));
+
+                        if ($record['claimed_ts'] !== '') {
+                            $datetime_claimed = strtotime(date($record['claimed_ts']));
+                            $date_claimed = strtotime(date("Y-m-d", $datetime_claimed));
+                        } else {
+                            $date_claimed = '';
+                        }
+
+                        $num_days_sent = intval(($today - $date_sent) / 86400);
+                        if ($date_claimed != '') {
+                            $num_days_claimed = intval(($today - $date_claimed) / 86400);
+                        } else {
+                            $num_days_claimed = 0;
+                        }
+
+                        // Num of gift cards sent yesterday
+                        if (($num_days_sent == 1) && (!empty($record['reserved_ts']))) {
+                            $rewards_sent_yesterday++;
+                        }
+
+                        // Num of gift cards claimed yesterday
+                        if (($num_days_claimed == 1) && ($status == 3)) {
+                            $rewards_claimed_yesterday++;
+                        }
+
+                        // Num of gift cards sent > 7 days ago and have not been viewed
+                        if (($num_days_sent > 7) && ($status == 2)) {
+                            $num_gc_sent_more_than_7days_ago++;
+                        }
+
+                        // Num of gift cards sent < 7 days ago and have not been viewed
+                        if (($num_days_sent <= 7) && ($status == 2)) {
+                            $num_gc_send_less_than_7days_ago++;
+                        }
+
+                        // Num of gift cards in total have been awarded
+                        if (($status == 2) || ($status == 3)) {
+                            $num_gc_awarded++;
+                        }
+
+                        // Num of gift cards in total have been claimed
+                        if ($status == 3) {
+                            $num_gc_claimed++;
+                        }
+                    }
+
+                    // Num of gift cards with NOT Ready status (value of 0)
+                    if ($status == 0) {
+                        $num_gc_notready++;
+                    }
+
+                    // Num of gift cards with Ready status (value of 1 means Ready)
+                    if ($status == 1) {
+                        $brand = $record['brand'];
+                        $num_gc_available++;
+                        if (empty($brand_type[$brand])) {
+                            $brand_type[$brand] = 1;
+                        } else {
+                            $brand_type[$brand]++;
+                        }
+                    }
+                }
+            }
+
+        } else {
+            $this->emError("No data was found for DailySummary from gc library [pid:$gcr_pid/event id:$gcr_event_id]");
+            \REDCap::logEvent("No data was found for DailySummary from gc library [pid:$gcr_pid/event id:$gcr_event_id]");
+        }
+
+        $results = array(
+            "sent_yesterday" => $rewards_sent_yesterday,
+            "claimed_yesterday" => $rewards_claimed_yesterday,
+            "sent_gt7days_ago" => $num_gc_sent_more_than_7days_ago,
+            "sent_lt7days_ago" => $num_gc_send_less_than_7days_ago,
+            "not_ready" => $num_gc_notready,
+            "num_available" => $num_gc_available,
+            "num_awarded" => $num_gc_awarded,
+            "num_claimed" => $num_gc_claimed,
+            "brand" => $brand_type
+        );
+
+        return $results;
     }
 
 }

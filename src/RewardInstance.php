@@ -85,6 +85,7 @@ class RewardInstance
 
         } catch (Exception $ex) {
             $this->module->emError("Exception caught initializing Reward Instance for project $this->project_id, with error: " . json_encode($ex));
+            \REDCap::logEvent("Exception caught initializing Reward Instance for project $this->project_id", "with error: " . json_encode($ex));
         }
     }
 
@@ -174,6 +175,7 @@ class RewardInstance
                 !is_null($Proj->RepeatingFormsEvents[$this->email_event_id][$email_form])) {
                 $message .= "<li>Email address cannot be on a form that is repeating or in a repeating event.</li>";
                 $this->module->emError("Email address cannot be on a form that is repeating or in a repeating event.");
+                \REDCap::logEvent("Email address cannot be on a form that is repeating or in a repeating event.");
             }
         }
 
@@ -198,6 +200,7 @@ class RewardInstance
             $record = array_keys($data)[0];
             if (empty($record)) {
                 $this->module->emError("There are no records to test the gift card logic '" . $this->logic . "' for pid $this->project_id");
+                \REDCap::logEvent("There are no records to test the gift card logic '" . $this->logic . "' for pid $this->project_id");
                 $message .= "<li>Reward logic (" . $this->logic . ") cannot be confirmed to be valid because there are no records to check against.</li>";
             } else {
                 $valid = $this->checkRewardStatus($record);
@@ -262,6 +265,7 @@ class RewardInstance
         // This path is used to test out the logic to make sure it is configured correctly
         if (empty($record)) {
             $this->module->emError("Entered record id is null so gift card logic '" . $this->logic . "' for pid $this->project_id cannot be performed.");
+            \REDCap::logEvent("Entered record id is null so gift card logic '" . $this->logic . "' for pid $this->project_id cannot be performed.");
             return $status;
         } else {
 
@@ -271,6 +275,7 @@ class RewardInstance
             $thisRecord = $data[$record][$this->fk_event_id];
             if (is_null($this->email_event_id)) {
                 $this->module->emError("This email event ID is null so cannot find the email address.");
+                \REDCap::logEvent("This email event ID is null so cannot find the email address.");
                 $status = false;
             } else {
                 $this->email_address = $data[$record][$this->email_event_id][$this->email];
@@ -323,6 +328,7 @@ class RewardInstance
             }
         } else {
             $this->module->emError("The field " . $this->brand_field . " needs to be a dropdown or radio field with list of brand names.");
+            \REDCap::logEvent("The field " . $this->brand_field . " needs to be a dropdown or radio field with list of brand names.");
         }
     }
 
@@ -374,6 +380,7 @@ class RewardInstance
             }
         } catch (Exception $ex) {
             $this->module->emError("Exception encountered when processing reward: " . $ex->getMessage());
+            \REDCap::logEvent("Exception encountered when processing reward: " ,  $ex->getMessage());
             $message .= "<br>Exception encountered! Please contact a REDCap administrator.";
         } finally {
             $this->module->emDebug("In finally: Before releasing lock");
@@ -548,7 +555,8 @@ class RewardInstance
                 null, null, null, null, $projFilter);
             if (!empty($projData)) {
                 $message = "Duplicate email addresss $this->email_address for reward $this->title and record $record_id";
-
+                // log that this email was rewarded multiple giftcards.
+                \REDCap::logEvent($message);
                 // Update the status for this record to say they were not sent a reward because it is a duplicate
                 $record[$record_id][$this->fk_event_id][$this->gc_status] = 'Duplicate email';
                 $err_msg = "Duplicate email for $record_id in project $this->project_id";
@@ -668,6 +676,7 @@ class RewardInstance
             $status = $error;
             $message = "<li>" . $status . "</li>";
             $this->module->emError($status);
+            \REDCap::logEvent($status);
         }
 
         return $message;
@@ -738,6 +747,7 @@ class RewardInstance
                 "CC:"       => $ccEmail
             );
             $this->module->emError("Attempted to send email to $emailTo but received error.", json_encode($email));
+            \REDCap::logEvent("Attempted to send email to $emailTo but received error.", json_encode($email));
         }
 
         return $status;

@@ -307,7 +307,6 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
             $this->emDebug("Calling cron Daily Summary for project $proj_id at URL " . $dailySummaryURL);
 
             // Call the project through the API so it will be in project context
-            // TODO replace http_get with guzzle
             $response = $this->getGuzzleClient()->get($dailySummaryURL);
             $this->emDebug("Completed Daily Summary for project $proj_id");
         }

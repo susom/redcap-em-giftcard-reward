@@ -163,7 +163,6 @@ class RewardInstance
                 if (is_null($this->email_event_id)) {
                     $this->email_event_id = $event_id;
                 } else {
-                    // TODO this will never be true!!
                     $message .= "<li>The email address is in more than 1 event: $this->email_event_id and $event_id.</li>";
                 }
             }
@@ -328,6 +327,7 @@ class RewardInstance
                 $this->brand_options[$key] = $value;
             }
         } else {
+            $this->module->emError("The field " . $this->brand_field . " needs to be a dropdown or radio field with list of brand names.");
             \REDCap::logEvent("The field " . $this->brand_field . " needs to be a dropdown or radio field with list of brand names.");
         }
     }

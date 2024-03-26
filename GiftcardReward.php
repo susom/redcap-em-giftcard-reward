@@ -380,7 +380,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
     public function getGuzzleClient(): \GuzzleHttp\Client
     {
         if (!$this->guzzleClient) {
-            $this->setGuzzleClient(new Client());
+            $this->setGuzzleClient(new \GuzzleHttp\Client());
         }
         return $this->guzzleClient;
     }

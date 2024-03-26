@@ -3,7 +3,7 @@
 
   "namespace":"Stanford\\GiftcardReward",
 
-  "description": "Automate the email of giftcards to eligible recipients",
+  "description": "Automate the email of gift cards to eligible recipients",
 
   "versions": [
     { "1.0.0": "Initial",
@@ -15,7 +15,8 @@
       "1.1.0": "Ability to inhibit emails and customize gift card display",
       "2.0.0": "Add internationalization",
       "3.0.0": "Change to use DB Internal Lock/Release functions.  Added additional messages when gift cards cannot be reserved",
-      "3.1.0": "Changed framework to 10"
+      "3.1.0": "Changed framework to 10",
+      "3.2.0": "Added additional customization of giftcard display and emails"
     }
   ],
   "compatibility": {
@@ -27,29 +28,18 @@
 
   "authors": [
     {
-      "name": "Andrew Martin",
-      "email": "andy123@stanford.edu",
+      "name": "Ihab Zeedia",
+      "email": "ihabz@stanford.edu",
       "institution": "Stanford University"
     },
     {
-      "name": "Lee Ann Yasukawa",
-      "email": "yasukawa@stanfordhealthcare.org",
-      "institution": "Stanford Health Care"
-    },
-    {
-      "name": "Ihab Zeedia",
-      "email": "ihabz@stanford.edu",
+      "name": "Jae Lee",
+      "email": "jael@stanford.edu",
       "institution": "Stanford University"
     }
   ],
 
-  "framework-version": 10,
-
-  "permissions": [
-    "redcap_save_record",
-    "redcap_module_save_configuration"
-  ],
-
+  "framework-version": 12,
   "links": {
     "control-center": [
     ],
@@ -118,7 +108,7 @@
     },
     {
       "key": "gcr-event-id",
-      "name": "<span class='text-lg badge badge-lg badge-secondary'>GCR Event ID</span><br>If the Gift Card Repository is longitudinal, specify the numerical <u>Event ID</u> where the form resides<br>Leave blank for classical.  Must be a number.",
+      "name": "<span class='text-lg badge badge-lg badge-secondary'>GCR Event ID</span><br>If the Gift Card Repository is longitudinal, specify the numerical <u>Event ID</u> where the form resides<br>Leave blank for classical.  Must be a number",
       "required": false,
       "type": "number"
     },
@@ -130,7 +120,7 @@
     },
     {
       "key": "cc-email",
-      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CC Email</h6></span>This email address will be cc'd on all verification emails sent to participants when they become eligible for a reward, when the option is selected. Also, this email will be sent a copy of each Rewards email, when the option is selected. Each configuration has an option for verification and rewards emails so you can pick and choose based on the specific reward.",
+      "name": "<h6><span class='text-lg badge badge-lg badge-danger'>CC Email</h6></span>This email address will be cc'd on all verification emails sent to participants when they become eligible for a reward, when the option is selected. Also, this email will be sent a copy of each Rewards email, when the option is selected. Each configuration has an option for verification and rewards emails so you can pick and choose based on the specific reward",
       "required": false,
       "type": "text"
     },
@@ -184,13 +174,13 @@
         },
         {
           "key": "reward-fk-event-id",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Event ID</span></h6>Specify the event where the the following fields resides. Cannot be repeating event.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Event ID</span></h6>Specify the event in this project where the the fields defined below are located.  Note that this cannot be a repeating event",
           "required": true,
           "type": "event-list"
         },
         {
           "key": "reward-logic",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Logic</span></h6>A gift card will be automatically awarded when this logic is true AND the ID field below is empty",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Logic</span></h6>A gift card will be automatically awarded when this logic is true AND the 'Reward ID' field below is empty",
           "required": true,
           "type": "text"
         },
@@ -202,74 +192,55 @@
         },
         {
           "key": "reward-status",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Status Field</span></h6>Specify the field where the reward status should be put",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Status Field</span></h6>Specify the field in this project where the reward status should be stored",
           "required": true,
           "type": "field-list"
         },
         {
           "key": "reward-url",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID URL field</span></h6>The reward page URL is stored in the library project.  The URL can also be stored in this gift card project if a field name is selected here.  This field validation is text.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID URL field</span></h6>This url is normally sent in an email from the GCR project, but you can also store it in this project.  This can be useful if you wish to display the url to a participant and bypass email (see Link Only / No email section below).<br><i>* Optional unless you use the Link Only/No Email setting</i>",
+          "required": false,
+          "type": "field-list"
+        },
+        {
+          "key": "reward-number-field",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Number field</span></h6>The actual gift card number is normally displayed from the reward-url, but in some cases you might want to bring it into this project so you can show it to the user.  WARNING: If you display the reward from this project without using the reward-url, the status of the reward by not be known.  You cannot determine if someone 'viewed' it or if it has just be 'reserved'.  So, this is not recommended for most use cases.<br><i>* Optional unless you use the Link Only/No Email setting</i>",
           "required": false,
           "type": "field-list"
         },
         {
           "key": "reward-amount",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Amount</span></h6>Specify the dollar amount (number only) for this gift card (ex. 20 for twenty dollars).<br>Only cards with a matching dollar amount from the GCR will be used.<br>If left blank, the next card from the GCR will be taken regardless of dollar value.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Amount</span></h6>Specify the dollar amount (number only) for this gift card (ex. 20 for twenty dollars).<br>Only cards with a matching dollar amount from the GCR will be used.<br>If left blank, the next card from the GCR will be taken <u>regardless of dollar value</u>",
           "required": false,
           "type": "text"
         },
         {
           "key": "brand-field",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Brand</span></h6>Select the field that holds the brand that will be used for filtering gift cards. If empty, brand filtering is not performed. The brand field must be a drop down menu or a radio button selector.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Brand</span></h6>Select the field that holds the brand that will be used for filtering gift cards. If empty, brand filtering is not performed. The brand field must be defined as a dropdown or radio in this project with a value that matches the name of the brand in the GCR",
           "required": false,
           "type": "field-list"
         },
         {
           "key": "dont-send-email",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Inhibit emails</span></h6>When this checkbox is selected, gift card processing will take place to Reserve a gift card for the record but the gift card link will not be sent out in email. This feature can be used when email addresses are not known; so instead, you can display the URL to the gift card to the participant.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Link Only / No Email</span></h6>When this option checkbox is selected, gift card processing will not send the gift card link to an email address.  Instead, it will only reserve a gift card from the library.  When you check this, you should be sure to return the reward url+hash to this project and then display it to the participant (via piping or via an alert/notification).  This is designed for cases where you do not capture the participants email in your project.  This does mean, however, that it is easier for someone to potentially retake the survey again and get another code",
           "required": false,
           "type": "checkbox"
         },
         {
           "key": "reward-email",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Address</span></h6>Enter the email address field from this project where the reward will be sent. This field does not need to be in the same event as the other gift card fields but it cannot be on a repeating form or in a repeating event or in multiple events. This field is required to be filled in unless the 'Inhibit emails from being sent' checkbox above is selected.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Address</span></h6>Enter the email address field from this project where the reward will be sent. This field does not need to be in the same event as the other gift card fields but it cannot be on a repeating form or in a repeating event or in multiple events. This field is required to be filled in unless the 'Link Only / No emails' checkbox above is selected",
           "required": false,
-          "type": "field-list",
-          "branchingLogic" : {
-            "field" : "donot-send-email",
-            "value" : "0"
-          }
+          "type": "field-list"
         },
         {
           "key": "reward-email-from",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email From</span></h6>Enter the email address to use in the From field. This field does not need to be filled in when the 'Inhibit emails from being sent' checkbox is selected",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email From</span></h6>Enter the email address to use in the From field. This field does not need to be filled in when the 'Link Only / No emails' checkbox is selected",
           "required": false,
-          "type": "text",
-          "branchingLogic" : {
-            "field" : "donot-send-email",
-            "value" : "0"
-          }
-        },
-        {
-          "key": "batch-processing",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Batch Processing</span></h6>Select this checkbox for batch processing.  No gift cards will automatically be sent but a list is of eligible records will be provided from the EM Batch Processing page so you can select the records you want to send gift cards to. <b>Do not</b> select Batch Processing if 'Inhibit emails from being sent' is selected.",
-          "required": false,
-          "type": "checkbox"
-        },
-        {
-          "key": "display-field-list",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Fields to Display for Batch Processing</span></h6>Comma separately list of fields to display when selecting gift cards to send during batch processing. The fields must reside in this configuration event. This list is only used when 'Batch Processing' above is selected.",
-          "required": false,
-          "type": "text",
-          "branchingLogic" : {
-            "field" : "batch-processing",
-            "value" : "1"
-          }
+          "type": "text"
         },
         {
           "key": "emails",
-          "name": "<h6 style='color:red;text-align:center'>Email Settings</h6>The following fields are used to tailor the subject and body of emails going out to participants.</li></ul>",
-          "required": false,
+          "name": "<h6 style='color:red;text-align:center'>Verification Email Settings</h6>The following fields are used to tailor the subject and body of the verification email that contains a link+hash which will open a page where they can view the reward.</li></ul>",
           "type": "descriptive"
         },
         {
@@ -286,9 +257,14 @@
         },
         {
           "key": "cc-verification-email",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Notification Email</span></h6>Check this box if you want each reward notification email to be cc'd to the <b>CC Email</b> address entered above.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Email</span></h6>Check this box if you want each reward notification email to be cc'd to the <b>CC Email</b> address entered above.",
           "required": false,
           "type": "checkbox"
+        },
+        {
+          "key": "reward-messaging",
+          "name": "<h6 style='color:red;text-align:center'>Reward Display and Email Settings</h6>The following fields are used to tailor the page where the reward is displayed AND for emails containing the actual award that might be triggered by entering an email on the Reward Display page.  This content can be further customized by editing the language (English.ini) file on the server as it supports MLM.",
+          "type": "descriptive"
         },
         {
           "key": "reward-email-subject",
@@ -298,20 +274,48 @@
         },
         {
           "key": "reward-email-header",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Code Email Body</span></h6>Enter text to appear before the details of the reward in the body of the email.<br>Piping is allowed.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Code Header</span></h6>Enter text to appear before the details of the reward in the body of the email and on the reward display page.<br>Piping is allowed.",
           "required": false,
           "type": "rich-text"
         },
         {
           "key": "cc-reward-email",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Email</span></h6>Check this box if you want each reward email to be cc'd to the <b>CC Email</b> address entered above.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>CC Reward Email</span></h6>Check this box if you want each reward email to be cc'd to the <b>CC Reward Email</b> address entered above.",
           "required": false,
           "type": "checkbox"
         },
         {
+          "key": "reward-display-override",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Display Override</span></h6>Check this box if you want to override the default rendering of the gift/reward card.  If set, this will apply to both email and webpage<br><i>(* Optional)</i>",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "reward-display-override-template",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Display Override Template</span></h6>This field was added as a custom request for a project where they wanted more control over the display of the reward to a recipient when they click through on the reward url+hash link.<br>Enter the HTML you wish here and mask reward variables as follows: {{REWARD_NAME}}, {{REWARD_CODE}}, {{CHALLENGE_CODE}}, {{BRAND}}, {{AMOUNT}}.  This only applies if the 'Reward Display Override' checkbox above is checked",
+          "required": false,
+          "type": "rich-text"
+        },
+        {
+          "key": "batch-processing-desc",
+          "name": "<h6 style='color:red;text-align:center'>Batch Processing Options</h6>You can configure batch-based processing so rewards are not automatically handed out in real-time",
+          "type": "descriptive"
+        },
+        {
+          "key": "batch-processing",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Batch Processing</span></h6>Select this checkbox for batch processing.  No gift cards will automatically be sent but a list is of eligible records will be provided from the EM Batch Processing page so you can select the records you want to send gift cards to. <b>Do not</b> select Batch Processing if 'Link Only / No emails' is selected.",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "display-field-list",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Fields to Display for Batch Processing</span></h6>Comma separately list of fields to display when selecting gift cards to send during batch processing. The fields must reside in this configuration event. This list is only used when 'Batch Processing' above is selected.",
+          "required": false,
+          "type": "text"
+        },
+        {
           "key": "options",
           "name": "<h6 style='color:red;text-align:center'>Notification Settings</h6>The following are options to keep you informed about your gift card library. As a default, you will receive email notifications for these events:<br><ul><li>There are no gifts available but a participant qualifies for one.</li><li>A daily summary describing the gift card library status.</li></ul>",
-          "required": false,
           "type": "descriptive"
         },
         {
@@ -334,7 +338,13 @@
         },
         {
           "key": "allow-multiple-rewards",
-          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Allow Multiple Rewards</span></h6>When <b>Allow Multiple Rewards</b> is selected, rewards will be sent to an email address that has already received a reward. When this is NOT selected, a reward will <b>not</b> be sent if the same email address was already sent a reward.",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'>Allow Multiple Rewards</span></h6>Normally, when this is NOT checked AND when an email field is mapped, only one reward will be issued per email address.  If you wish to allow the same email to receive more than one award, then check this",
+          "required": false,
+          "type": "checkbox"
+        },
+        {
+          "key": "allow-multiple-rewards-limited",
+          "name": "<h6><span class='text-lg badge badge-lg badge-success'><TODO>Limit Rewards to One/Title/Email</span></h6>This is a feature in progress and has not been implemented fully.  If you need this, please post a request to the github site for the module.  Currently, it does not function",
           "required": false,
           "type": "checkbox"
         },

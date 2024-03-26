@@ -4,8 +4,6 @@ namespace Stanford\GiftcardReward;
 
 use Exception;
 use ExternalModules\ExternalModules;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 
 require_once "emLoggerTrait.php";
 require_once "src/InsertInstrumentHelper.php";
@@ -106,8 +104,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
      * @param null $response_id
      * @param $repeat_instance
      */
-    public function redcap_save_record($project_id, $record = NULL, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance)
-    {
+    public function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance) {
 
         // Return the Reward configurations
         $gc_pid = $this->getProjectSetting("gcr-pid");
@@ -383,7 +380,7 @@ class GiftcardReward extends \ExternalModules\AbstractExternalModule
     public function getGuzzleClient(): \GuzzleHttp\Client
     {
         if (!$this->guzzleClient) {
-            $this->setGuzzleClient(new Client());
+            $this->setGuzzleClient(new \GuzzleHttp\Client());
         }
         return $this->guzzleClient;
     }

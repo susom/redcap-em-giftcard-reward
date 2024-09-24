@@ -102,9 +102,7 @@
       "key": "gcr-pid",
       "name": "<span class='text-lg badge badge-lg badge-secondary'>GCR Project ID</span><br>This is the project containing all of the gift cards",
       "required": true,
-      "type": "project-id",
-      "source": "config/config.js",
-      "functionName": "GiftCardRewardConfig.init"
+      "type": "project-id"
     },
     {
       "key": "gcr-event-id",

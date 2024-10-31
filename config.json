@@ -186,25 +186,25 @@
           "key": "reward-fk-field",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Field</span></h6>Specify a field in this project where the ID of the Gift Card assigned to this reward will be stored",
           "required": true,
-          "type": "field-list"
+          "type": "text"
         },
         {
           "key": "reward-status",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID Status Field</span></h6>Specify the field in this project where the reward status should be stored",
           "required": true,
-          "type": "field-list"
+          "type": "text"
         },
         {
           "key": "reward-url",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward ID URL field</span></h6>This url is normally sent in an email from the GCR project, but you can also store it in this project.  This can be useful if you wish to display the url to a participant and bypass email (see Link Only / No email section below).<br><i>* Optional unless you use the Link Only/No Email setting</i>",
           "required": false,
-          "type": "field-list"
+          "type": "text"
         },
         {
           "key": "reward-number-field",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Number field</span></h6>The actual gift card number is normally displayed from the reward-url, but in some cases you might want to bring it into this project so you can show it to the user.  WARNING: If you display the reward from this project without using the reward-url, the status of the reward by not be known.  You cannot determine if someone 'viewed' it or if it has just be 'reserved'.  So, this is not recommended for most use cases.<br><i>* Optional unless you use the Link Only/No Email setting</i>",
           "required": false,
-          "type": "field-list"
+          "type": "text"
         },
         {
           "key": "reward-amount",
@@ -216,7 +216,7 @@
           "key": "brand-field",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Brand</span></h6>Select the field that holds the brand that will be used for filtering gift cards. If empty, brand filtering is not performed. The brand field must be defined as a dropdown or radio in this project with a value that matches the name of the brand in the GCR",
           "required": false,
-          "type": "field-list"
+          "type": "text"
         },
         {
           "key": "dont-send-email",
@@ -228,7 +228,7 @@
           "key": "reward-email",
           "name": "<h6><span class='text-lg badge badge-lg badge-success'>Reward Email Address</span></h6>Enter the email address field from this project where the reward will be sent. This field does not need to be in the same event as the other gift card fields but it cannot be on a repeating form or in a repeating event or in multiple events. This field is required to be filled in unless the 'Link Only / No emails' checkbox above is selected",
           "required": false,
-          "type": "field-list"
+          "type": "text"
         },
         {
           "key": "reward-email-from",

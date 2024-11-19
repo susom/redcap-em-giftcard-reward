@@ -7,7 +7,7 @@ use REDCap;
 use Project;
 use Exception;
 
-$gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? filter_var($_GET['reward_token'], FILTER_UNSAFE_RAW) : null;
+$gcToken = isset($_GET['reward_token']) && !empty($_GET['reward_token']) ? htmlspecialchars($_GET['reward_token']) : null;
 $pid = isset($_GET['pid']) && !empty($_GET['pid']) ? filter_var($_GET['pid'], FILTER_SANITIZE_NUMBER_INT) : null;
 $action = isset($_GET['action']) && !empty($_GET['action']) ? filter_var($_GET['action'], FILTER_UNSAFE_RAW) : null;
 $emailAddr = isset($_GET['e_addr']) && !empty($_GET['e_addr']) ? filter_var($_GET['e_addr'], FILTER_SANITIZE_EMAIL) : null;

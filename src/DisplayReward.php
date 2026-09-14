@@ -563,10 +563,14 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
         <div class="container">
 
             <div class="row mt-5">
-                <div class="col-3">
+                <!-- The side spacers are desktop-only and the card is full width below md.
+                     As plain `col-3 / col-6 / col-3` this page kept the 25%/50%/25% split at every
+                     width, so on a phone the reward squeezed into a ~190px column and wrapped every
+                     three words. This is a page participants open from their inbox, on a phone. -->
+                <div class="d-none d-md-block col-md-3">
                 </div>
 
-                <div class="col-6 pt-5">
+                <div class="col-12 col-md-6 pt-5">
 
 
                     <div class="border border-2">
@@ -593,8 +597,15 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
                             <input id="token" style="display:none" value="<?php echo setToken(); ?>">
 
                             <div><?php echo $module->tt("send_codes_in_email", "Send"); ?></div>
-                            <label><b><?php echo $module->tt("email_addr"); ?></b></label><input id="emailAddress" style="width: 250px; margin: 10px 10px" value="<?php echo $module->escape(getEmailAddress()); ?>">
-                            <input id="button" type="button" value="<?php echo $module->tt("email_send_button"); ?>" onclick="sendReward()"><br>
+                            <label for="emailAddress"><b><?php echo $module->tt("email_addr"); ?></b></label>
+                            <!-- A fixed 250px input overflowed the card on a phone; cap it instead.
+                                 type=email gets the right on-screen keyboard, and the button needs
+                                 real padding to be a tap target rather than a 26px-tall sliver. -->
+                            <input id="emailAddress" type="email" autocomplete="email"
+                                   style="width: 100%; max-width: 250px; margin: 10px 0; box-sizing: border-box;"
+                                   value="<?php echo $module->escape(getEmailAddress()); ?>">
+                            <input id="button" type="button" style="padding: 10px 18px; min-height: 44px;"
+                                   value="<?php echo $module->tt("email_send_button"); ?>" onclick="sendReward()"><br>
 
                             <div id="invalidAddr" style="display:none;color:red">
                                 ***   This is not a valid email address  ***
@@ -611,7 +622,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
                     </div>
                 </div>   <! -- end column  -->
 
-                <div class="col-3">
+                <div class="d-none d-md-block col-md-3">
                 </div>
 
             </div>   <!-- end row -->

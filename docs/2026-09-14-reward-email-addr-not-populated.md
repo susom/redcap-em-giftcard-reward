@@ -133,6 +133,29 @@ FAIL  V7  library reward_email_addr holds the address it went to
 The link-style run now produces a library row with `status=2`, `reserved_ts`, `url` = the vendor
 link the participant received, and `reward_email_addr` = the address it was sent to.
 
+## One thing the E2E turned up on the way past
+
+The claim page (`DisplayReward.php`) was unusable on a phone, and it is a page participants open
+from their inbox. Its Bootstrap columns were a flat `col-3 / col-6 / col-3`, with no breakpoint, so
+at iPhone 13 width the reward squeezed into a ~190px column and wrapped every three words; the
+email input had a hard `width: 250px` and overflowed the card; and the Send button was a 26px-tall
+sliver, well under a usable tap target.
+
+Fixed minimally, not redesigned: the side spacers are now `d-none d-md-block`, the card is
+`col-12 col-md-6`, the input is `width:100%; max-width:250px`, and the button has real padding
+(now 73×44px). The page also echoed the participant's email address into a value attribute
+unescaped; it now goes through `$module->escape()`.
+
+This is separate from the reported bug and touches a page SPARCLE never reaches. It is in the same
+file, so if you want to ship the data fix alone, the layout change is exactly three hunks in
+`src/DisplayReward.php`: the two `col-3` → `d-none d-md-block col-md-3` spacers, `col-6` →
+`col-12 col-md-6`, and the input/button block.
+
+**Do not drop the `$module->escape()` on that input along with them.** The page was echoing the
+participant's address into a `value` attribute unescaped; that belongs with the fix, not with the
+layout. `escape()` is `htmlspecialchars(..., ENT_QUOTES)`, which round-trips an ordinary address
+unchanged — asserted by `C8b` in the claim-page spec.
+
 ## Repairing rewards already issued
 
 The fix does nothing for rewards already out the door, and this was never only SPARCLE's problem —
@@ -191,7 +214,7 @@ Both observed on the localhost copy; confirm against prod before acting.
 | file | change |
 |---|---|
 | `src/RewardInstance.php` | the fix: `url`, `reward_hash`, and `reward_email_addr` written at reservation |
-| `src/DisplayReward.php` | event-id clobber, unchecked save, and an unescaped echo of the participant's address |
+| `src/DisplayReward.php` | event-id clobber, unchecked save, an unescaped echo — and, separably, the mobile layout of the claim page |
 | `src/BackfillEmailAddr.php` | new — shared core: find affected rows, plan a repair, apply it |
 | `pages/BackfillEmailAddr.php` | new — Control Center page over that core |
 | `config.json` | registers the Control Center link; version note |

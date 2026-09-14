@@ -133,6 +133,42 @@ FAIL  V7  library reward_email_addr holds the address it went to
 The link-style run now produces a library row with `status=2`, `reserved_ts`, `url` = the vendor
 link the participant received, and `reward_email_addr` = the address it was sent to.
 
+## Repairing rewards already issued
+
+The fix does nothing for rewards already out the door, and this was never only SPARCLE's problem —
+every project whose library holds link-style cards has the same blank columns. Repair is possible
+because the library row still records which project record it was reserved for (`reward_record`)
+and the module configuration still records which field holds that record's address
+(`reward-email`) — the same two things `reserveReward()` uses.
+
+Both front-ends call `src/BackfillEmailAddr.php`, so they cannot disagree about what "affected"
+means or about what gets written. See [backfill-tool.md](backfill-tool.md) for the full walkthrough.
+
+**Control Center → “Gift Cards: Backfill Reward Email Address”** — admin-only, scan then apply,
+no shell access needed. Start here.
+
+**CLI**, where a shell is available:
+
+```bash
+php scripts/backfill-reward-email-addr.php --overview            # every project on the server
+php scripts/backfill-reward-email-addr.php 33646                 # dry run, lists every value
+php scripts/backfill-reward-email-addr.php 33646 --apply
+```
+
+Blanks only, never overwrites; only rows whose `reward_pid` matches; and `url` only where
+`egift_number` is itself a link, because that is the one case where what the participant received
+is known for certain. (For the claim-link flow the URL carried a one-time hash that was never
+stored — inventing one would be a lie, so those are left alone.)
+
+On the localhost copy the plan is **69 addresses and 92 urls**, with 23 rows skipped and a reason
+shown for each (almost all early test records that genuinely have no email on file).
+
+> **On a copied project, the default `reward_pid` is wrong.** Copying renumbers the project, but
+> `reward_pid` is ordinary field data and keeps pointing at the original — on the localhost copy the
+> rows still say `33646`, not `265`, so the scan finds nothing until you pick `33646`. The page
+> detects this and says so; the CLI takes `--reward-pid=33646`. On the real server the default is
+> correct.
+
 ## Two things for the study team, not code
 
 1. **The down-taper configuration points at a non-field.** Reward config 3, "$25 down taper gift
@@ -150,15 +186,18 @@ link the participant received, and `reward_email_addr` = the address it was sent
 
 Both observed on the localhost copy; confirm against prod before acting.
 
-> Rewards already issued keep their blank columns; the fix only changes what happens from now on.
-> Repairing them is the next commit.
-
 ## Files changed
 
 | file | change |
 |---|---|
 | `src/RewardInstance.php` | the fix: `url`, `reward_hash`, and `reward_email_addr` written at reservation |
 | `src/DisplayReward.php` | event-id clobber, unchecked save, and an unescaped echo of the participant's address |
-| `scripts/e2e-giftcard-fixture.php` | new — E2E fixture and DB assertions |
+| `src/BackfillEmailAddr.php` | new — shared core: find affected rows, plan a repair, apply it |
+| `pages/BackfillEmailAddr.php` | new — Control Center page over that core |
+| `config.json` | registers the Control Center link; version note |
+| `scripts/backfill-reward-email-addr.php` | new — CLI over the same core |
+| `scripts/e2e-giftcard-fixture.php` | new — reservation E2E fixture and DB assertions |
+| `scripts/e2e-backfill-fixture.php` | new — backfill-page E2E fixture (users + library snapshot) |
 | `e2e/reserve-reward.js` | new — link-style reservation, through the UI |
 | `e2e/claim-page.js` | new — claim page, desktop and iPhone 13 |
+| `e2e/backfill-page.js` | new — the Control Center page, including the non-admin refusal |

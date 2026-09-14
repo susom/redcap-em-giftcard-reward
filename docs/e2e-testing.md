@@ -8,6 +8,7 @@ the distinction the September 2026 bug turned on:
 |---|---|---|---|
 | `e2e/reserve-reward.js` | `egift_number` **is a URL** | the vendor link, in the verification email | reservation, the SPARCLE/prod shape |
 | `e2e/claim-page.js` | `egift_number` is a plain code | a module claim link → `DisplayReward.php` | reservation **and** the claim page, desktop + iPhone 13 |
+| `e2e/backfill-page.js` | — | — | the Control Center backfill page: overview, scan, a forged-nonce refusal, a real Apply, mobile, and the non-admin refusal |
 
 Neither mocks the save hook. A coordinator ticking a payment checkbox and pressing Save is the only
 thing that fires `redcap_save_record`, so that is what the specs do.
@@ -52,6 +53,30 @@ docker exec $WEB php $FIX 265 teardown
 ```
 
 Screenshots land in `e2e/shots/`.
+
+## Running the Control Center page spec
+
+```bash
+docker exec $WEB php /var/www/html/modules-local/giftcard_reward_v9.9.9/scripts/e2e-backfill-fixture.php setup
+node e2e/backfill-page.js
+docker exec $WEB php /var/www/html/modules-local/giftcard_reward_v9.9.9/scripts/e2e-backfill-fixture.php teardown
+```
+
+**Always tear down.** Unlike the reservation specs, which create their own record and delete it,
+this one presses Apply on the *real* library and rewrites dozens of existing rows. Setup snapshots
+`reward_email_addr` and `url` for the whole library into a module system setting first, and
+teardown restores every row verbatim. Skipping teardown leaves backfilled data behind.
+
+It creates three accounts, not one:
+
+- a throwaway **super user** — the page is admin-only;
+- an **ordinary user**, so the spec can prove a non-admin is *refused* rather than merely not shown
+  the link. In practice REDCap's own Control Center gate refuses first, with "You do not have
+  permission to access this page." at HTTP 200; the page's `isSuperUser()` check is the backstop;
+- a **second super user**, used only by the forged-nonce case (B11c). One account is not enough:
+  signing the same user in again invalidates the earlier session, and a failed
+  `forceCsrfTokenCheck()` poisons the session it happened in — either way the real Apply then fails
+  for a reason unrelated to the code under test.
 
 ## The fixture
 

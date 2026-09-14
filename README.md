@@ -200,6 +200,14 @@ Once the participant clicks on the link received in the rewards email, the rewar
 
 Participants have the option to send themselves or someone else a copy of the reward number for future reference.
 
+## Administration
+
+**Control Center → “Gift Cards: Backfill Reward Email Address”** finds Gift Card Libraries whose
+issued rewards are missing *Email Address where reward was sent* (and the url the participant was
+sent), and repairs them. Administrators only; scan first, then apply. Rewards issued before v3.2.1
+are affected on any library whose `egift_number` values are vendor links.
+See [docs/backfill-tool.md](docs/backfill-tool.md).
+
 ## Cron Processing
 
 There are 2 cron jobs running daily:
@@ -244,7 +252,8 @@ code routed through the module's claim page. See [docs/e2e-testing.md](docs/e2e-
 | doc | about |
 |---|---|
 | [docs/e2e-testing.md](docs/e2e-testing.md) | running the end-to-end tests, and the fixture |
-| [docs/2026-09-14-reward-email-addr-not-populated.md](docs/2026-09-14-reward-email-addr-not-populated.md) | why `reward_email_addr` and `url` were never written for link-style gift cards and the fix |
+| [docs/backfill-tool.md](docs/backfill-tool.md) | the Control Center page and CLI that repair libraries missing `reward_email_addr` / `url` |
+| [docs/2026-09-14-reward-email-addr-not-populated.md](docs/2026-09-14-reward-email-addr-not-populated.md) | why `reward_email_addr` and `url` were never written for link-style gift cards, and the fix |
 
 ## Future Enhancements
     - Add the ability for projects to download a standard Gift Card Library Template automatically

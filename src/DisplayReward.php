@@ -506,9 +506,22 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
             // If the field reward_email_addr exists, save the email address where we sent the reward email message
             // This is a new field option so older projects may not have this field defined
             if (!empty($gcProjDD->metadata['reward_email_addr'])) {
-                $gclEventId = $module->getProjectSetting('gcr-event-id', $pid);
-                $data[$gclRecordId][$gclEventId]['reward_email_addr'] = $emailAddress;
+
+                // Do NOT re-read 'gcr-event-id' here. That setting is blank for a classic library
+                // (the config says "leave blank for classical"), so re-reading it threw away the
+                // event id findGiftCardLibraryRecord() had already resolved from the record itself
+                // and wrote into $data[$record][''] instead. Harmless on a classic project, where
+                // saveData ignores the event key -- and a silent no-save on a longitudinal one.
+                $saveEventId = empty($gclEventId) ? array_keys($gcProjDD->eventInfo)[0] : $gclEventId;
+
+                $data[$gclRecordId][$saveEventId]['reward_email_addr'] = $emailAddress;
                 $save_status = REDCap::saveData($gclPid, 'array', $data);
+                if (empty($save_status['ids']) || !empty($save_status['errors'])) {
+                    $module->emError("Could not save reward_email_addr for record $gclRecordId in project $gclPid",
+                        json_encode($save_status['errors'] ?? []));
+                    \REDCap::logEvent("Could not save the email address the reward was sent to",
+                        "Gift Card Library project $gclPid, record $gclRecordId");
+                }
             } else {
                 $module->emDebug("Project $gclPid does not have field 'reward_email_addr' so we could not save the email address $emailAddress");
             }
@@ -580,7 +593,7 @@ function sendRewardEmail($pid, $gcToken, $emailAddress) {
                             <input id="token" style="display:none" value="<?php echo setToken(); ?>">
 
                             <div><?php echo $module->tt("send_codes_in_email", "Send"); ?></div>
-                            <label><b><?php echo $module->tt("email_addr"); ?></b></label><input id="emailAddress" style="width: 250px; margin: 10px 10px" value="<?php echo getEmailAddress(); ?>">
+                            <label><b><?php echo $module->tt("email_addr"); ?></b></label><input id="emailAddress" style="width: 250px; margin: 10px 10px" value="<?php echo $module->escape(getEmailAddress()); ?>">
                             <input id="button" type="button" value="<?php echo $module->tt("email_send_button"); ?>" onclick="sendReward()"><br>
 
                             <div id="invalidAddr" style="display:none;color:red">

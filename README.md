@@ -233,5 +233,18 @@ This module uses the Internationalization framework.  There is an English.ini fi
 * This External Module uses the emLogger External Module developed at Stanford to log processing messages.
 * This External Module uses the DB functions GET_LOCK and RELEASE_LOCK when reserving a gift card from the gift card library so more than one record cannot reserve the same gift card.
 
+## Testing
+
+End-to-end Playwright specs live in `e2e/`, driven by a PHP fixture in `scripts/`. They cover both
+library shapes — a card whose `egift_number` is a vendor URL, and one that is a plain redemption
+code routed through the module's claim page. See [docs/e2e-testing.md](docs/e2e-testing.md).
+
+## Documentation
+
+| doc | about |
+|---|---|
+| [docs/e2e-testing.md](docs/e2e-testing.md) | running the end-to-end tests, and the fixture |
+| [docs/2026-09-14-reward-email-addr-not-populated.md](docs/2026-09-14-reward-email-addr-not-populated.md) | why `reward_email_addr` and `url` were never written for link-style gift cards and the fix |
+
 ## Future Enhancements
     - Add the ability for projects to download a standard Gift Card Library Template automatically

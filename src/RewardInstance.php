@@ -634,6 +634,15 @@ class RewardInstance
         $message = '';
         $gcr_record_id = $reward_record[$this->gcr_pk];
 
+        // Both of these are written to the gift card library further down, so neither may depend on
+        // which branch below runs. They used to be assigned only in the else-branch, which left them
+        // undefined -- and so saved as blank -- for every library whose egift_number is itself a URL.
+        $hash = '';
+        $reward_url = '';
+
+        // Which address, if any, the reward actually went out to. Stays empty when no email is sent.
+        $emailed_to = '';
+
         // If the reward code is actually a link address, we will put the link into the email body
         $gcr_record_code = $reward_record['egift_number'];
         if (substr($gcr_record_code, 0, 4) == "http") {
@@ -649,13 +658,11 @@ class RewardInstance
             $hash = $this->createRewardHash();
 
             // Create the URL for this reward. Add on the project and hash
-            $url = $this->module->getUrl("src/DisplayReward.php", true, true);
-            $url .= "&reward_token=" . $hash;
-            $reward_url = $url;
+            $reward_url = $this->module->getUrl("src/DisplayReward.php", true, true) . "&reward_token=" . $hash;
 
             // Set up the verification email to send to the recipient
             $bodyDescription = $this->module->tt("your_link") . '<br>' .
-                '<a href="' . $url . '">' . $url . '</a>';
+                '<a href="' . $reward_url . '">' . $reward_url . '</a>';
         }
 
         // Send the verification email to the recipient unless the don't send email box was checked
@@ -670,6 +677,9 @@ class RewardInstance
                 $status = false;
             } else {
                 $status = $this->sendEmailWithLinkToReward($record_id, $bodyDescription);
+                if ($status) {
+                    $emailed_to = $this->email_address;
+                }
             }
         }
         if ($status) {
@@ -681,7 +691,29 @@ class RewardInstance
             $reward_record[$gcr_record_id][$this->gcr_event_id]['reward_record'] = $record_id;
             $reward_record[$gcr_record_id][$this->gcr_event_id]['reserved_ts'] = date('Y-m-d H:i:s');
             $reward_record[$gcr_record_id][$this->gcr_event_id]['reward_hash'] = $hash;
-            $reward_record[$gcr_record_id][$this->gcr_event_id]['url'] = $url;
+            $reward_record[$gcr_record_id][$this->gcr_event_id]['url'] = $reward_url;
+
+            // "Email Address where reward was sent".
+            //
+            // This used to be written only by DisplayReward.php, i.e. only once the participant
+            // opened the module's claim page. That page is never reached when egift_number is
+            // already a URL: the card travels in the verification email itself, so there is no
+            // claim link, nobody visits, and the field stayed empty for every reward the library
+            // ever issued. Record it here, where the email is actually sent -- for both flows.
+            // DisplayReward still overwrites it if the participant later asks for the codes at a
+            // different address, which is the more specific answer and should win.
+            //
+            // Guarded on the data dictionary: the field is a later addition to the library
+            // template and older library projects legitimately do not have it.
+            // The rest of this module is PHP 7-compatible syntax, so no nullsafe operator here.
+            // gcr_proj is null only if the constructor's Project() threw, which it logs.
+            $libHasEmailField = !empty($this->gcr_proj) && !empty($this->gcr_proj->metadata['reward_email_addr']);
+            if (!empty($emailed_to) && $libHasEmailField) {
+                $reward_record[$gcr_record_id][$this->gcr_event_id]['reward_email_addr'] = $emailed_to;
+            } elseif (!empty($emailed_to)) {
+                $this->module->emDebug("Gift Card Library $this->gcr_pid has no 'reward_email_addr' field, "
+                    . "so the address the $this->title reward was sent to was not recorded.");
+            }
 
             // Format the data the way REDCap wants it
             $err_msg = "<li>Problem saving Gift Card Library updates for record $gcr_record_id in project ". $this->gcr_pid . "</li>";

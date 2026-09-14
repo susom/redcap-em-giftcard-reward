@@ -16,7 +16,8 @@
       "2.0.0": "Add internationalization",
       "3.0.0": "Change to use DB Internal Lock/Release functions.  Added additional messages when gift cards cannot be reserved",
       "3.1.0": "Changed framework to 10",
-      "3.2.0": "Added additional customization of giftcard display and emails"
+      "3.2.0": "Added additional customization of giftcard display and emails",
+      "3.2.1": "Record the url and the recipient address in the Gift Card Library at reservation time, so link-style gift cards fill in 'Email Address where reward was sent'. Fix the claim page's event id handling and escape the address it echoes."
     }
   ],
   "compatibility": {
